@@ -1,8 +1,12 @@
 
 #' @importFrom MASS mvrnorm
+#' @importFrom stats rchisq rgamma rnorm
 NULL
 
-glue <- paste0#function(...,sep='',collapse=NULL)paste(...,sep=sep,collapse=NULL)
+glue <- function(...) {
+  paste0(...)
+  #function(...,sep='',collapse=NULL)paste(...,sep=sep,collapse=NULL)
+}
 
 #' Create Parameters for Simulation with Uncertainty
 #'
@@ -107,9 +111,8 @@ ord.matrix <- function(x,...){
 	if(!is.square(x))stop('matrix is not square')
 	dim(x)[[1]]
 }
-#' @export
+
 rinvchisq <- function(n,df,cov) df*as.vector(cov)/rchisq(n, df)
-#' @export
 simblock <- function(n,df,cov){
     if(df < length(cov))stop('df is less than matrix length')
     if(length(cov)==1)return(rinvchisq(n,df,cov))
@@ -119,7 +122,7 @@ simblock <- function(n,df,cov){
     for(i in 1:n)res[i,] <- half(posmat(riwish(s,df-s+1,df*cov)))
     res
 }
-#' @export
+
 riwish <- function(s,df,prec){
    if (df<=0) stop ("Inverse Wishart algorithm requires df>0")
    R <- diag(sqrt(2*rgamma(s,(df + s  - 1:s)/2)))
@@ -161,7 +164,7 @@ as.matrix.halfmatrix <- function(x,...){
     y[is.na(y)] <- t(y)[is.na(y)]
     y
 }
-#' @export
+
 posmat <- function(x,...) {
      if(any(diag(x) <=0)) stop("matrix cannot be made positive-definite")
      if(!is.square(x))stop('x is not square')

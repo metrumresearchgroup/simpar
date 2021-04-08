@@ -24,11 +24,9 @@ package:
 	make pkgdown
 
 check:
-	make house
 	make doc
 	make build
 	R CMD check ${TARBALL} --no-manual
-	make unit
 
 check-only:
 	R CMD check --as-cran ${TARBALL}
@@ -37,7 +35,6 @@ cran:
 	make house
 	make doc
 	make build
-	export _MRGSOLVE_SKIP_MODLIB_BUILD_=false
 	R CMD CHECK --as-cran ${TARBALL}
 
 spelling:
@@ -45,9 +42,6 @@ spelling:
 
 covr:
 	Rscript "inst/maintenance/covr.R"
-
-house:
-	Rscript "inst/maintenance/build_housemodel.R"
 
 test-all:
 	Rscript inst/maintenance/tests.R

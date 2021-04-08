@@ -1,2 +1,7 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
+Makefile
+test\.R
+simpar*\.tar\.gz
+simpar\.Rcheck
+
