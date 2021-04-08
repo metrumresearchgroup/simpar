@@ -1,11 +1,14 @@
 Package: simpar
 Type: Package
-Title: What the Package Does (Title Case)
+Title: Create Parameters for Simulation with Uncertainty
 Version: 0.1.0
 Author: Who wrote it
 Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
+Description: Given the parameter estimates of a mixed effect model, this 
+    function generates sets of parameters for simulation.  Each set takes into 
+    account the relevant variance-covariance structure of the fixed effects and 
+    random effects.  Two levels of random effects are supported, following the 
+    naming conventions of NONMEM.
 License: What license is it under?
 Imports: MASS
 Encoding: UTF-8

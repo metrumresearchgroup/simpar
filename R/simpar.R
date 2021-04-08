@@ -1,11 +1,42 @@
 
 #' @importFrom MASS mvrnorm
-#'
 NULL
 
-glue <- function(...,sep='',collapse=NULL)paste(...,sep=sep,collapse=NULL)
+glue <- paste0#function(...,sep='',collapse=NULL)paste(...,sep=sep,collapse=NULL)
 
-
+#' Create Parameters for Simulation with Uncertainty
+#'
+#' @param nsim scalar numeric specifying the number of sets to attempt
+#' @param theta vector of point estimates of fixed effect parameters
+#' @param covar variance-covariance matrix for fixed effect parameters
+#' @param omega list of variance-covariance matrices for first level random effects
+#' @param sigma list of variance-covariance matrices for second level random effects
+#' @param odf vector of omega degrees of freedom, one per matrix
+#' @param sdf vector of sigma degrees of freedom, one per matrix
+#' @param digits number of significant digits to include in output
+#' @param min ower limit for parameter estimates
+#' @param max upper limit for parameter estimates
+#'
+#' @details
+#' If min or max are non-default (see below), you may want to set nsim
+#' marginally higher to allow for dropped sets. covar is coerced to matrix
+#' using as.matrix.
+#'
+#' If omega and sigma are not lists, they are coerced using list. Then each
+#' element is coerced using as.matrix.
+#'
+#' By default, each element in odf and sdf will be the length (number of
+#' elements) in the corresponding matrix.
+#'
+#' `min` and `max` may be given as scalar values, in which case they apply to
+#' all parameters (as do the defaults). Alternatively, the first n limits may
+#' be specified as a vector, in which case the remaining (if any) will be the
+#' default. If any simulated parameter does not fall between its limits, inclusive, the entire parameter set (row) is dropped from the result, with warning.
+#'
+#' @return
+#' matrix, with column names indicating parameters, and row names indicating
+#' set number before filtering by min and max.
+#'
 #' @export
 simpar <-
 function(nsim,theta,covar,omega,sigma,odf=NULL,sdf=NULL,digits=4,min=-Inf,max=Inf){
@@ -77,7 +108,7 @@ ord.matrix <- function(x,...){
 	dim(x)[[1]]
 }
 #' @export
-rinvchisq <- function(n,df,cov)df*cov/rchisq(n, df)
+rinvchisq <- function(n,df,cov) df*as.vector(cov)/rchisq(n, df)
 #' @export
 simblock <- function(n,df,cov){
     if(df < length(cov))stop('df is less than matrix length')
