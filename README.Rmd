@@ -18,7 +18,7 @@ knitr::opts_chunk$set(
 <!-- badges: start -->
 <!-- badges: end -->
 
-The goal of simpar is to ...
+The goal of simpar is to create parameters for simulation with uncertainty.
 
 ## Installation
 
