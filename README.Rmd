@@ -37,7 +37,7 @@ library(simpar)
 theta <- c(1,2,3)/10
 covar <- diag(0.1, 3)
 omega <- matrix(1)
-sigma <- matrix(1)
-simpar(10, theta, covar, omega, sigma)
+sigma <- matrix(0.025)
+simpar(10, theta, covar, omega, sigma, odf = 100, sdf = 1000)
 ```
 
