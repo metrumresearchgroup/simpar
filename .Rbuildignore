@@ -5,3 +5,4 @@ test\.R
 simpar*\.tar\.gz
 simpar\.Rcheck
 
+^README\.Rmd$
