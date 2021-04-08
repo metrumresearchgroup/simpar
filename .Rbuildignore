@@ -6,3 +6,4 @@ simpar*\.tar\.gz
 simpar\.Rcheck
 \.drone\.yml
 ^README\.Rmd$
+NEWS\.md
