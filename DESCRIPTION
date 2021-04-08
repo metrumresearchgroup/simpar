@@ -11,6 +11,7 @@ Description: Given the parameter estimates of a mixed effect model, this
     naming conventions of NONMEM.
 License: GPL
 Imports: MASS
+Suggests: testthat
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
