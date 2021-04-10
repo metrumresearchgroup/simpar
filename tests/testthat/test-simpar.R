@@ -77,3 +77,13 @@ test_that("sims are reproducible", {
   pars2 <- simpar(100, theta = theta, covar = covar, omega2, sigma, 10, 10)
   expect_identical(pars1, pars2)
 })
+
+test_that("posmat returns a matrix with det greater than zero", {
+  x <- matrix(1, nrow = 3, ncol = 3)
+  ans <- simpar:::posmat(x)
+  expect_equal(nrow(ans), 3)
+  expect_equal(ncol(ans), 3)
+  expect_identical(diag(ans), c(1,1,1))
+  expect_true(det(x) <= 0)
+  expect_true(det(ans) > 0)
+})
