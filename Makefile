@@ -49,9 +49,6 @@ no-test:
 
 pkgdown:
 	Rscript "inst/maintenance/pkgdown.R"
-	#cp -r DOCS/ ../mrgsolve/docs/
-	#touch ../mrgsolve/docs/.nojekyll
-
 
 readme:
 	Rscript -e 'rmarkdown::render("README.Rmd")'
@@ -75,16 +72,6 @@ test:
 
 test1:
 	Rscript -e 'testthat::test_file("tests/testthat.R")'
-
-test2:
-	Rscript -e 'testthat::test_dir("inst/maintenance/unit")'
-
-clean:
-	rm src/*.o
-	rm src/*.so
-
-datasets:
-	Rscript inst/maintenance/datasets.R
 
 rhub:
 	Rscript -e 'rhub::check_for_cran(env_vars = c(`_R_CHECK_FORCE_SUGGESTS_` = "false"))'

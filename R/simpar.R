@@ -18,7 +18,7 @@ glue <- function(...) {
 #' @param odf vector of omega degrees of freedom, one per matrix
 #' @param sdf vector of sigma degrees of freedom, one per matrix
 #' @param digits number of significant digits to include in output
-#' @param min ower limit for parameter estimates
+#' @param min lower limit for parameter estimates
 #' @param max upper limit for parameter estimates
 #'
 #' @details
@@ -41,9 +41,54 @@ glue <- function(...) {
 #' matrix, with column names indicating parameters, and row names indicating
 #' set number before filtering by min and max.
 #'
+#' @examples
+#'
+#'set.seed(100)
+#'simpar(
+#'  nsim=10,
+#'  theta=c(13,75,1),
+#'  covar=matrix(c(10,7,2,7,30,1,2,1,0.5),ncol=3,nrow=3),
+#'  omega=list(
+#'    0.1,
+#'    matrix(c(0.04,0.02,0.02,0.04),ncol=2,nrow=2)
+#'  ),
+#'  odf=c(50,20),
+#'  sigma=list(0.04,1),
+#'  sdf=c(99,99),
+#'  min=rep(0,3),
+#'  max=rep(90,3)
+#')
+#'simpar(
+#'  nsim=1,
+#'  theta=c(13,75,1),
+#'  covar=matrix(c(10,7,2,7,30,1,2,1,0.5),ncol=3,nrow=3),
+#'  omega=list(
+#'    0.1,
+#'    matrix(c(0.04,0.02,0.02,0.04),ncol=2,nrow=2)
+#'  ),
+#'  odf=c(50,20),
+#'  sigma=list(0.04,1),
+#'  sdf=c(99,99),
+#'  min=rep(0,3),
+#'  max=rep(90,3)
+#')
+#'simpar(
+#'  nsim=1,
+#'  theta=c(13,75,1),
+#'  covar=matrix(c(10,7,2,7,30,1,2,1,0.5),ncol=3,nrow=3),
+#'  omega=list(
+#'    0.1,
+#'    matrix(c(0.04,0.02,0.02,0.04),ncol=2,nrow=2)
+#'  ),
+#'  odf=c(50,20),
+#'  sigma=list(0.04,1),
+#'  sdf=c(99,99),
+#'  min=Inf,
+#'  max=-1
+#')
+#'
 #' @export
-simpar <-
-function(nsim,theta,covar,omega,sigma,odf=NULL,sdf=NULL,digits=4,min=-Inf,max=Inf){
+simpar <- function(nsim,theta,covar,omega,sigma,odf=NULL,sdf=NULL,digits=4,min=-Inf,max=Inf){
   covar <- as.matrix(covar)
   if(ord(covar)!=length(theta))stop('order of covar is not equal to length theta')
   if(det(covar) < 0) stop("covar is not positive-definite.")
