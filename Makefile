@@ -43,9 +43,6 @@ spelling:
 covr:
 	Rscript "inst/maintenance/covr.R"
 
-test-all:
-	Rscript inst/maintenance/tests.R
-
 no-test:
 	make build
 	R CMD check ${TARBALL} --no-tests --no-manual
@@ -55,8 +52,6 @@ pkgdown:
 	#cp -r DOCS/ ../mrgsolve/docs/
 	#touch ../mrgsolve/docs/.nojekyll
 
-unit:
-	Rscript -e 'testthat::test_dir("inst/maintenance/unit")'
 
 readme:
 	Rscript -e 'rmarkdown::render("README.Rmd")'
@@ -76,7 +71,7 @@ install-build:
 
 test:
 	R CMD INSTALL ${PKGDIR}
-	make test-all
+	Rscript -e 'testthat::test_dir("tests/testthat")'
 
 test1:
 	Rscript -e 'testthat::test_file("tests/testthat.R")'
