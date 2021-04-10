@@ -41,7 +41,7 @@ spelling:
 	Rscript -e 'spelling::spell_check_package(".")'
 
 covr:
-	Rscript "inst/maintenance/covr.R"
+	Rscript "inst/script/covr.R"
 
 no-test:
 	make build
