@@ -116,5 +116,25 @@ test_that("omega and sigma must be positive definite", {
   )
 })
 
-
+test_that("simulated parameters respect bounds", {
+  bounds <- rep(0, 3 + 3 + 1)
+  pars1 <- simpar(100, theta = theta, covar = covar, omega, sigma, 10, 10)
+  set.seed(456)
+  expect_warning(
+    pars2 <- simpar(100, theta = theta, covar = covar, omega, sigma, 10, 10, min = bounds),
+    regexp = "rows dropped"
+  )
+  expect_equal(nrow(pars1), 100)
+  expect_true(nrow(pars2) < 100)
+  mn2 <- sapply(pars2, min)
+  expect_true(all(mn2 > 0))
+  mn1 <- sapply(pars1, min)
+  expect_false(all(mn1 > 0))
+  set.seed(456)
+  expect_warning(
+    pars3 <- simpar(100, theta = theta, covar = covar, omega, sigma, 10, 10, min = 0),
+    regexp = "rows dropped"
+  )
+  expect_identical(pars2, pars3)
+})
 

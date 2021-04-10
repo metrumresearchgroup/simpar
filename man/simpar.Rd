@@ -59,7 +59,8 @@ elements) in the corresponding matrix.
 \code{min} and \code{max} may be given as scalar values, in which case they apply to
 all parameters (as do the defaults). Alternatively, the first n limits may
 be specified as a vector, in which case the remaining (if any) will be the
-default. If any simulated parameter does not fall between its limits, inclusive, the entire parameter set (row) is dropped from the result, with warning.
+default. If any simulated parameter does not fall between its limits, inclusive,
+the entire parameter set (row) is dropped from the result, with warning.
 }
 \examples{
 
