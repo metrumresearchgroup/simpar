@@ -187,7 +187,7 @@ half.matrix <- function(x,...) {
   structure(x,class='halfmatrix')
 }
 #' @export
-ord.halfmatrix <- function(x,...){
+ord.halfmatrix <- function(x,...){  # nocov start
   ord <- sqrt(0.25+2*length(x))-0.5
   if(as.integer(ord)!=ord)stop('invalid length for half matrix')
   ord
@@ -208,7 +208,7 @@ as.matrix.halfmatrix <- function(x,...){
   y[as.matrix(dex)] <- x
   y[is.na(y)] <- t(y)[is.na(y)]
   y
-}
+} # nocov end
 
 posmat <- function(x,...) {
   if(any(diag(x) <=0)) stop("matrix cannot be made positive-definite")
@@ -229,7 +229,9 @@ posmat <- function(x,...) {
   diag(y) <- diagonal
   if(det(x)>0) x else posmat(y)
 }
+# nocov start
 offdiag <- function(x,...)UseMethod('offdiag')
 #' @export
 offdiag.halfmatrix <- function(x,...)x[sapply(strsplit(names(x),'\\.'),`[`,1)!=sapply(strsplit(names(x),'\\.'),`[`,2)]
+# nocov end
 

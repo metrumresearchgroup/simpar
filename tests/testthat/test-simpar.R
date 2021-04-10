@@ -19,13 +19,13 @@ bmat <- function (..., context = NULL) {
   mat
 }
 
-omega2 <- bmat(1, 0, 3)
+omega <- bmat(1, 0, 3)
 sigma <- matrix(1)
 theta <- c(1,2,3)
 covar <- diag(0.1, 3, 3)
 
 test_that("return value as expected", {
-  pars <- simpar(100, theta = theta, covar = covar, omega2, sigma, 10, 10)
+  pars <- simpar(100, theta = theta, covar = covar, omega, sigma, 10, 10)
   expect_is(pars, "matrix")
   expect_equal(nrow(pars), 100)
   expect_equal(ncol(pars), (3 + 3 + 1))
@@ -38,7 +38,7 @@ test_that("return value as expected", {
 test_that("theta return", {
   set.seed(87654)
   covar <- bmat(1, 0, 2, 0, 0, 3)
-  pars <- simpar(500, theta = theta, covar = covar, omega2, sigma, 10, 10)
+  pars <- simpar(500, theta = theta, covar = covar, omega, sigma, 10, 10)
   pars <- as.data.frame(pars)
   m1 <- mean(pars$TH.1)
   expect_equal(round(m1), 1)
@@ -57,13 +57,13 @@ test_that("theta return", {
 test_that("omega return", {
   set.seed(87654)
   sigma <- bmat(1, 0.5, 2)
-  pars <- simpar(500, theta = theta[1], covar = covar[1,1], omega2, sigma, 100, 40)
+  pars <- simpar(500, theta = theta[1], covar = covar[1,1], omega, sigma, 100, 40)
   pars <- as.data.frame(pars)
   m1 <- mean(pars$OM1.1)
   expect_equal(round(m1), 1)
   m2 <- mean(pars$OM2.2)
   expect_equal(round(m2), 3)
-  pars2 <- simpar(500, theta = theta[1], covar = covar[1,1], omega2, sigma, 50, 40)
+  pars2 <- simpar(500, theta = theta[1], covar = covar[1,1], omega, sigma, 50, 40)
   pars2 <- as.data.frame(pars2)
   v1 <- var(pars$OM1.1)
   v2 <- var(pars2$OM1.1)
@@ -72,9 +72,9 @@ test_that("omega return", {
 
 test_that("sims are reproducible", {
   set.seed(123)
-  pars1 <- simpar(100, theta = theta, covar = covar, omega2, sigma, 10, 10)
+  pars1 <- simpar(100, theta = theta, covar = covar, omega, sigma, 10, 10)
   set.seed(123)
-  pars2 <- simpar(100, theta = theta, covar = covar, omega2, sigma, 10, 10)
+  pars2 <- simpar(100, theta = theta, covar = covar, omega, sigma, 10, 10)
   expect_identical(pars1, pars2)
 })
 
@@ -87,3 +87,34 @@ test_that("posmat returns a matrix with det greater than zero", {
   expect_true(det(x) <= 0)
   expect_true(det(ans) > 0)
 })
+
+test_that("omega and sigma must be symmetric", {
+  set.seed(112)
+  omega2 <- matrix(rnorm(4), ncol = 2, nrow = 2)
+  expect_error(
+    simpar(100, theta = theta, covar = covar, omega2, sigma, 10, 10),
+    regexp = "matrix is not symmetric"
+  )
+  sigma2 <- matrix(rnorm(4), ncol = 2, nrow = 2)
+  expect_error(
+    simpar(100, theta = theta, covar = covar, omega, sigma2, 10, 10),
+    regexp = "matrix is not symmetric"
+  )
+})
+
+test_that("omega and sigma must be positive definite", {
+  set.seed(112)
+  omega2 <- bmat(1,100,1)
+  expect_error(
+    simpar(100, theta = theta, covar = covar, omega2, sigma, 10, 10),
+    regexp = "not all omega blocks are positive-definite"
+  )
+  sigma2 <- omega2
+  expect_error(
+    simpar(100, theta = theta, covar = covar, omega, sigma2, 10, 10),
+    regexp = "not all sigma blocks are positive-definite"
+  )
+})
+
+
+

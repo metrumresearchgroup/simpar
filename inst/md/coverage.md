@@ -1,5 +1,5 @@
-# coverage: 63.48%
+# coverage: 76.77%
 
 |file       | coverage|
 |:----------|--------:|
-|R/simpar.R |    63.48|
+|R/simpar.R |    76.77|
