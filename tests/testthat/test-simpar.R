@@ -139,6 +139,7 @@ test_that("simulated parameters respect bounds", {
 })
 
 test_that("outputs match metrumrg implementation", {
+  skip_if_not_installed("metrumrg")
   theta <- c(1,2,3,4,5)/10
   covar <- diag(0.1, 5)/seq(1,5)
   omega <- diag(c(1,2,3,4))
