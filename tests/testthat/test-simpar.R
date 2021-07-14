@@ -149,3 +149,16 @@ test_that("outputs match metrumrg implementation", {
   b <- metrumrg::simpar(100, theta, covar, omega, sigma)
   expect_identical(a,b)
 })
+
+test_that("minimum degrees of freedom is nrow", {
+  theta <- c(1,2,3,4,5)/10
+  covar <- diag(0.1, 5)/seq(1,5)
+  omega <- diag(c(1,2,3,4))
+  sigma <- diag(c(10,100))
+  expect_type(simpar(5, theta, covar, omega, sigma),"double")
+  expect_type(simpar(5, theta, covar, omega, sigma, odf = 4), "double")
+  expect_error(
+    simpar(5, theta, covar, omega, sigma, odf = 3),
+    regexp = "less than number of rows"
+  )
+})
