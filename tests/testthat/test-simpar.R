@@ -138,3 +138,14 @@ test_that("simulated parameters respect bounds", {
   expect_identical(pars2, pars3)
 })
 
+test_that("outputs match metrumrg implementation", {
+  theta <- c(1,2,3,4,5)/10
+  covar <- diag(0.1, 5)/seq(1,5)
+  omega <- diag(c(1,2,3,4))
+  sigma <- diag(c(10,100))
+  set.seed(12345)
+  a <- simpar(100, theta, covar, omega, sigma)
+  set.seed(12345)
+  b <- metrumrg::simpar(100, theta, covar, omega, sigma)
+  expect_identical(a,b)
+})
