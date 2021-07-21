@@ -1,7 +1,7 @@
 Package: simpar
 Type: Package
 Title: Create Parameters for Simulation with Uncertainty
-Version: 0.0.1.9002
+Version: 0.0.1.9003
 Author: Metrum Research Group
 Maintainer: Kyle Baron <kyleb@metrumrg.com>
 Description: Given the parameter estimates of a mixed effect model, this 
