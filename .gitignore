@@ -1,0 +1,6 @@
+README.html
+*.tar.gz
+simpar.Rcheck
+test.R
+.Rhistory
+.Rproj.user

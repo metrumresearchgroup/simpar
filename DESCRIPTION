@@ -1,16 +1,17 @@
 Package: simpar
 Type: Package
 Title: Create Parameters for Simulation with Uncertainty
-Version: 0.0.1.9000
+Version: 0.1.0
 Author: Metrum Research Group
-Maintainer: The package maintainer <yourself@somewhere.net>
+Maintainer: Kyle Baron <kyleb@metrumrg.com>
 Description: Given the parameter estimates of a mixed effect model, this 
     function generates sets of parameters for simulation.  Each set takes into 
     account the relevant variance-covariance structure of the fixed effects and 
     random effects.  Two levels of random effects are supported, following the 
     naming conventions of NONMEM.
-License: GPL
+License: GPL (>=2)
 Imports: MASS
+Suggests: testthat, metrumrg
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)

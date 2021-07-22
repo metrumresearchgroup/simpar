@@ -7,3 +7,4 @@ simpar\.Rcheck
 \.drone\.yml
 ^README\.Rmd$
 NEWS\.md
+\.gitkeep

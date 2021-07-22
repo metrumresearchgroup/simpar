@@ -41,10 +41,7 @@ spelling:
 	Rscript -e 'spelling::spell_check_package(".")'
 
 covr:
-	Rscript "inst/maintenance/covr.R"
-
-test-all:
-	Rscript inst/maintenance/tests.R
+	Rscript "inst/script/covr.R"
 
 no-test:
 	make build
@@ -52,11 +49,6 @@ no-test:
 
 pkgdown:
 	Rscript "inst/maintenance/pkgdown.R"
-	#cp -r DOCS/ ../mrgsolve/docs/
-	#touch ../mrgsolve/docs/.nojekyll
-
-unit:
-	Rscript -e 'testthat::test_dir("inst/maintenance/unit")'
 
 readme:
 	Rscript -e 'rmarkdown::render("README.Rmd")'
@@ -76,20 +68,10 @@ install-build:
 
 test:
 	R CMD INSTALL ${PKGDIR}
-	make test-all
+	Rscript -e 'testthat::test_dir("tests/testthat")'
 
 test1:
 	Rscript -e 'testthat::test_file("tests/testthat.R")'
-
-test2:
-	Rscript -e 'testthat::test_dir("inst/maintenance/unit")'
-
-clean:
-	rm src/*.o
-	rm src/*.so
-
-datasets:
-	Rscript inst/maintenance/datasets.R
 
 rhub:
 	Rscript -e 'rhub::check_for_cran(env_vars = c(`_R_CHECK_FORCE_SUGGESTS_` = "false"))'
