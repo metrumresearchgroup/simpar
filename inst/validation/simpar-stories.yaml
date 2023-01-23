@@ -1,0 +1,16 @@
+SIM-S001:
+  name: create parameters for simulation
+  description: As a user, I would  to create parameters for simulation with uncertainty.
+  ProductRisk: Low
+  requirements:
+  - SIM-R001
+  - SIM-R002
+  - SIM-R003
+  - SIM-R004
+  - SIM-R005
+  - SIM-R006
+  - SIM-R007
+  - SIM-R008
+  - SIM-R009
+  - SIM-R010
+  - SIM-R011
