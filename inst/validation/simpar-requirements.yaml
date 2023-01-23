@@ -1,0 +1,50 @@
+SIM-R001:
+  description: return value as expected
+  tests:
+  - SMP-SIM-001
+
+SIM-R002:
+  description: return theta matrix as expected
+  tests:
+  - SMP-SIM-002
+
+SIM-R003:
+  description: return omega matrix as expected
+  tests:
+  - SMP-SIM-003
+
+SIM-R004:
+  description: produces simulations consistently
+  tests:
+  - SMP-SIM-004
+
+SIM-R005:
+  description: returns a matrix with determinant greater than zero
+  tests:
+  - SMP-SIM-005
+
+SIM-R006:
+  description: confirms omega and sigma must be symmetric
+  tests:
+  - SMP-SIM-006
+
+SIM-R007:
+  description: confirms omega and sigma must be positive definite
+  tests:
+  - SMP-SIM-007
+
+SIM-R008:
+  description: confirms simulated parameters respect bounds
+  tests:
+  - SMP-SIM-008
+
+SIM-R009:
+  description: confirms outputs match metrumrg implementation
+  tests:
+  - SMP-SIM-009
+
+SIM-R010:
+  description: "minimum degrees of freedom is nrow
+  tests:
+  - SMP-SIM-010
+
