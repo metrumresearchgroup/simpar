@@ -44,7 +44,11 @@ SIM-R009:
   - SMP-SIM-009
 
 SIM-R010:
-  description: "minimum degrees of freedom is nrow
+  description: confirms minimum degrees of freedom is equal number of rows per matrix
   tests:
   - SMP-SIM-010
 
+SIM-R011:
+  description: confirms consistent number of signficant figures
+  tests:
+  - SMP-SIM-011
