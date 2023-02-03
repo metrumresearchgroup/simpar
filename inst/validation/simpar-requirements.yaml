@@ -14,7 +14,7 @@ SIM-R003:
   - SMP-SIM-003
 
 SIM-R004:
-  description: produces simulations consistently
+  description: are reproducible when seed is set
   tests:
   - SMP-SIM-004
 
@@ -49,6 +49,6 @@ SIM-R010:
   - SMP-SIM-010
 
 SIM-R011:
-  description: confirms consistent number of signficant figures
+  description: confirms expected number of signficant figures
   tests:
   - SMP-SIM-011
