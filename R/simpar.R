@@ -123,14 +123,6 @@ simpar <- function(nsim,theta,covar,omega,sigma,odf=NULL,sdf=NULL,digits=4,min=-
   dimnames(mvr) <- dimnames(omg) <- dimnames(sig) <- list(NULL,NULL)
   dimnames(mvr)[[2]] <- paste('TH',seq(length.out=dim(mvr)[[2]]),sep='.')
   dimnames(mvr)[[1]] <- seq(length.out=dim(mvr)[[1]])
-  impliedNames <- function(x){#converts a vector of block sizes to implied full-block names
-    vars <- sum(x)
-    crit <- cumsum(x)-x+1
-    diag <- diag(rep(crit,x))
-    good <- outer(colSums(diag),rowSums(diag),FUN='==')
-    half <- half(good)
-    names(half[half])
-  }
   dimnames(omg)[[2]] <- glue('OM',impliedNames(sapply(omega,ord)))
   dimnames(omg)[[1]] <- seq(length.out=dim(omg)[[1]])
   dimnames(sig)[[2]] <- glue('SG',impliedNames(sapply(sigma,ord)))
@@ -148,27 +140,12 @@ simpar <- function(nsim,theta,covar,omega,sigma,odf=NULL,sdf=NULL,digits=4,min=-
   sim
 }
 
-is.square <- function(x,...)UseMethod('is.square')
-#' @export
-is.square.matrix <- function(x,...)dim(x)[[1]]==dim(x)[[2]]
-ord <- function(x,...)UseMethod('ord')
-#' @export
-ord.matrix <- function(x,...){
-  if(!is.square(x))stop('matrix is not square')
-  dim(x)[[1]]
-}
-
-rinvchisq <- function(n,df,cov) df*as.vector(cov)/rchisq(n, df)
-simblock <- function(n,df,cov){
-  if(df < nrow(cov))stop('df is less than number of rows in matrix')
-  if(length(cov)==1)return(rinvchisq(n,df,cov))
-  s <- dim(cov)[1]
-  ncols <- s*(s+1)/2
-  res <- matrix(nrow=n, ncol=ncols)
-  for(i in 1:n)res[i,] <- half(posmat(riwish(s,df-s+1,df*cov)))
-  res
-}
-
+#' Draw sample from a inverse wishart distribution
+#'
+#' @param s pending
+#' @param df degrees of freedom; passed to rgamma
+#' @param prec pending
+#'
 riwish <- function(s,df,prec){
   if (df<=0) stop ("Inverse Wishart algorithm requires df>0")
   R <- diag(sqrt(2*rgamma(s,(df + s  - 1:s)/2)))
@@ -176,41 +153,57 @@ riwish <- function(s,df,prec){
   S <- t(solve(R))%*% chol(prec)
   t(S)%*%S
 }
-half <- function(x,...)UseMethod('half')
-#' @export
-half.matrix <- function(x,...) {
-  if(!isSymmetric(x))stop('matrix is not symmetric')
-  d <- ord(x)
-  dex <- data.frame(row=rep(1:d,each=d),col=rep(1:d,d))
-  dex <- dex[dex$col <= dex$row,]
-  x <- x[as.matrix(dex)]
-  names(x) <- do.call(paste,c(dex,list(sep='.')))
-  structure(x,class='halfmatrix')
-}
-#' @export
-ord.halfmatrix <- function(x,...){  # nocov start
-  ord <- sqrt(0.25+2*length(x))-0.5
-  if(as.integer(ord)!=ord)stop('invalid length for half matrix')
-  ord
-}
-#' @export
-print.halfmatrix <- function(x,...)print(unclass(x))
-as.halfmatrix <- function(x,...)UseMethod('as.halfmatrix')
-#' @export
-as.halfmatrix.halfmatrix <- function(x,...)x
-#' @export
-as.halfmatrix.default <- function(x,...)half(as.matrix.halfmatrix(x))
-#' @export
-as.matrix.halfmatrix <- function(x,...){
-  d <- ord.halfmatrix(x)
-  y <- matrix(nrow=d,ncol=d)
-  dex <- data.frame(row=rep(1:d,each=d),col=rep(1:d,d))
-  dex <- dex[dex$col <= dex$row,]
-  y[as.matrix(dex)] <- x
-  y[is.na(y)] <- t(y)[is.na(y)]
-  y
-} # nocov end
 
+#' Implement riwish for a diagonal matrix
+#' When we find that all off diagonal elements are 0, we will simulate
+#' as a series of independent invchisq simulations
+#'
+#' @param n number of simulations to perform; passed to rinvchisq
+#' @param df degrees of freedom; passed to rinvchisq
+#' @param cov the matrix to simulate
+#'
+riwish_diag <- function(n, df, cov) {
+  # implement riwish for a diagonal matrix
+  # this is a series of calls to metrumrg::rinvchisq
+  x <- cov[upper.tri(cov, diag = TRUE)]
+  lapply(x, function(xx) rinvchisq(n, df, xx))
+}
+
+#' Draw samples from a inverse chi-square distribution
+#'
+#' @param n number of simulations to perform; passed to rchisq
+#' @param df degrees of freedom; passed to rchisq
+#' @param cov the matrix to simulate
+#'
+rinvchisq <- function(n,df,cov) df*as.vector(cov)/rchisq(n, df)
+
+#' Handle diagonal omega or sigma
+#'
+#' @param n number of simulations to perform
+#' @param df degrees of freedom
+#' @param cov the matrix to simulate
+#' @param diagnal TRUE or FALSE; whether cov is a diagnal matrix or not
+#'
+simblock <- function(n,df,cov,diagnal = FALSE) {
+  diagnal = isTRUE(diagnal)
+  if(df < nrow(cov)) stop('df is less than matrix length')
+  if(length(cov)==1) return(rinvchisq(n,df,cov))
+  # Handle diagonal omega or sigma
+  if(is.diagonal(cov) && diagnal) {
+    res <- do.call(cbind, riwish_diag(n, df, cov))
+    return(res)
+  }
+  # Handle omega or sigma with off diagonal elements
+  s <- dim(cov)[1]
+  ncols <- s*(s+1)/2
+  res <- matrix(nrow=n, ncol=ncols)
+  for(i in 1:n)res[i,] <- half(posmat(riwish(s,df-s+1,df*cov)))
+  res
+}
+
+#' make positive definite matrix
+#'
+#' @param x matrix for calculation
 posmat <- function(x,...) {
   if(any(diag(x) <=0)) stop("matrix cannot be made positive-definite")
   if(!is.square(x))stop('x is not square')
@@ -230,9 +223,16 @@ posmat <- function(x,...) {
   diag(y) <- diagonal
   if(det(x)>0) x else posmat(y)
 }
-# nocov start
-offdiag <- function(x,...)UseMethod('offdiag')
-#' @export
-offdiag.halfmatrix <- function(x,...)x[sapply(strsplit(names(x),'\\.'),`[`,1)!=sapply(strsplit(names(x),'\\.'),`[`,2)]
-# nocov end
+
+#' Internal metrumrg function to generate names for outputs
+#'
+#' @param x list of matrix for calculation
+impliedNames <- function(x){
+  vars <- sum(x)
+  crit <- cumsum(x)-x+1
+  diag <- diag(rep(crit,x))
+  good <- outer(colSums(diag),rowSums(diag),FUN='==')
+  half <- half(good)
+  names(half[half])
+}
 
