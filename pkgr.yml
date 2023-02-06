@@ -8,6 +8,8 @@ Packages:
   - mrgvalidate
   - mrgvalprep
   - rlang
+  - pkgdown
+  - cli
 
 Repos:
   - CRAN: https://cran.rstudio.com
