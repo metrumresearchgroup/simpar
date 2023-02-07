@@ -1,0 +1,9 @@
+pandoc: 2.17.1.1
+pkgdown: 2.0.7
+pkgdown_sha: ~
+articles: {}
+last_built: 2023-02-07T15:17Z
+urls:
+  reference: https://metrumresearchgroup.github.io/simpar/reference
+  article: https://metrumresearchgroup.github.io/simpar/articles
+
