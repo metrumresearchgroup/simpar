@@ -51,7 +51,7 @@ test_that("theta return", {
   v2 <- var(pars$TH.2)
   expect_equal(round(v2), 2)
   v3 <- var(pars$TH.3)
-  expect_equal(round(v2), 2)
+  expect_equal(round(v3), 3)
 })
 
 test_that("omega return", {
@@ -163,3 +163,19 @@ test_that("minimum degrees of freedom is nrow", {
     regexp = "less than number of rows"
   )
 })
+
+test_that("zeros are in diagnal only matrix", {
+  cov <- matrix(data = c(1,0,0,1), nrow = 2, ncol = 2)
+
+  ans <- simpar:::simblock(n = 3, df = 100, cov = cov, diagnal = TRUE)
+  expect_true(all(ans[, 2] == 0))
+})
+
+test_that("simulate non-diagnal matrix", {
+  cov <- matrix(data = c(1,0.1,0.1,1), nrow = 2, ncol = 2)
+
+  ans <- simpar:::simblock(n = 3, df = 100, cov = cov, diagnal = TRUE)
+  expect_true(all(ans[, 2] != 0))
+})
+
+
