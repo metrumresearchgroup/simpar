@@ -1,3 +1,7 @@
+# simpar 0.1.1
+
+- This release adds documentation for validation purposes, but makes no functional changes.
+
 # simpar 0.1.0
 
 - The minimum number of degrees of freedom when simulating OMEGA or SIGMA

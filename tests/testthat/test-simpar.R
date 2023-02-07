@@ -24,7 +24,7 @@ sigma <- matrix(1)
 theta <- c(1,2,3)
 covar <- diag(0.1, 3, 3)
 
-test_that("return value as expected", {
+test_that("return value as expected [SMP-SIM-001]", {
   pars <- simpar(100, theta = theta, covar = covar, omega, sigma, 10, 10)
   expect_is(pars, "matrix")
   expect_equal(nrow(pars), 100)
@@ -35,7 +35,7 @@ test_that("return value as expected", {
   )
 })
 
-test_that("theta return", {
+test_that("theta return [SMP-SIM-002]", {
   set.seed(87654)
   covar <- bmat(1, 0, 2, 0, 0, 3)
   pars <- simpar(500, theta = theta, covar = covar, omega, sigma, 10, 10)
@@ -54,7 +54,7 @@ test_that("theta return", {
   expect_equal(round(v2), 2)
 })
 
-test_that("omega return", {
+test_that("omega return [SMP-SIM-003]", {
   set.seed(87654)
   sigma <- bmat(1, 0.5, 2)
   pars <- simpar(500, theta = theta[1], covar = covar[1,1], omega, sigma, 100, 40)
@@ -70,7 +70,7 @@ test_that("omega return", {
   expect_true(v2 / v1 > 2)
 })
 
-test_that("sims are reproducible", {
+test_that("sims are reproducible [SMP-SIM-004]", {
   set.seed(123)
   pars1 <- simpar(100, theta = theta, covar = covar, omega, sigma, 10, 10)
   set.seed(123)
@@ -78,7 +78,7 @@ test_that("sims are reproducible", {
   expect_identical(pars1, pars2)
 })
 
-test_that("posmat returns a matrix with det greater than zero", {
+test_that("posmat returns a matrix with det greater than zero [SMP-SIM-005]", {
   x <- matrix(1, nrow = 3, ncol = 3)
   ans <- simpar:::posmat(x)
   expect_equal(nrow(ans), 3)
@@ -88,7 +88,7 @@ test_that("posmat returns a matrix with det greater than zero", {
   expect_true(det(ans) > 0)
 })
 
-test_that("omega and sigma must be symmetric", {
+test_that("omega and sigma must be symmetric [SMP-SIM-006]", {
   set.seed(112)
   omega2 <- matrix(rnorm(4), ncol = 2, nrow = 2)
   expect_error(
@@ -102,7 +102,7 @@ test_that("omega and sigma must be symmetric", {
   )
 })
 
-test_that("omega and sigma must be positive definite", {
+test_that("omega and sigma must be positive definite [SMP-SIM-007]", {
   set.seed(112)
   omega2 <- bmat(1,100,1)
   expect_error(
@@ -116,7 +116,7 @@ test_that("omega and sigma must be positive definite", {
   )
 })
 
-test_that("simulated parameters respect bounds", {
+test_that("simulated parameters respect bounds [SMP-SIM-008]", {
   bounds <- rep(0, 3 + 3 + 1)
   pars1 <- simpar(100, theta = theta, covar = covar, omega, sigma, 10, 10)
   set.seed(456)
@@ -138,7 +138,7 @@ test_that("simulated parameters respect bounds", {
   expect_identical(pars2, pars3)
 })
 
-test_that("outputs match metrumrg implementation", {
+test_that("outputs match metrumrg implementation [SMP-SIM-009]", {
   skip_if_not_installed("metrumrg")
   theta <- c(1,2,3,4,5)/10
   covar <- diag(0.1, 5)/seq(1,5)
@@ -151,7 +151,7 @@ test_that("outputs match metrumrg implementation", {
   expect_identical(a,b)
 })
 
-test_that("minimum degrees of freedom is nrow", {
+test_that("minimum degrees of freedom is nrow [SMP-SIM-010]", {
   theta <- c(1,2,3,4,5)/10
   covar <- diag(0.1, 5)/seq(1,5)
   omega <- diag(c(1,2,3,4))
@@ -162,4 +162,16 @@ test_that("minimum degrees of freedom is nrow", {
     simpar(5, theta, covar, omega, sigma, odf = 3),
     regexp = "less than number of rows"
   )
+})
+
+test_that("conistent number of significant figures [SMP-SIM-011]", {
+
+theta <- c(1,2,3,4,5)/10
+covar <- diag(0.1, 5)/seq(1,5)
+omega <- diag(c(1,2,3,4))
+sigma <- diag(c(10,100))
+pars1 <- simpar(5, theta, covar, omega, sigma, digits = 4)
+
+expect_equal(pars1[1:10], signif(pars1[1:10], digits = 4))
+
 })
