@@ -116,6 +116,7 @@ simpar <- function(nsim,theta,covar,omega,sigma,odf=NULL,sdf=NULL,digits=4,min=-
   if(any(sdf < sapply(sigma,nrow)))stop('sdf[n] is less than number of rows in corresponding matrix')
   mvr <- mvrnorm(nsim,theta,covar)
   if(nsim==1)mvr <- t(as.matrix(mvr))
+  # replace 120-130 using simulate_matrix()
   omg <- lapply(1:length(odf),function(x)list(n=nsim,df=odf[[x]],cov=omega[[x]]))
   sig <- lapply(1:length(sdf),function(x)list(n=nsim,df=sdf[[x]],cov=sigma[[x]]))
   omg <- do.call(cbind,lapply(omg,function(x)do.call(simblock,x)))
@@ -127,6 +128,7 @@ simpar <- function(nsim,theta,covar,omega,sigma,odf=NULL,sdf=NULL,digits=4,min=-
   dimnames(omg)[[1]] <- seq(length.out=dim(omg)[[1]])
   dimnames(sig)[[2]] <- glue('SG',impliedNames(sapply(sigma,ord)))
   dimnames(sig)[[1]] <- seq(length.out=dim(sig)[[1]])
+
   sim <- cbind(mvr,omg,sig)
   sim <- round(signif(sim,digits),6)
   sim <- sim[apply(t(t(sim)-min)>=0,MARGIN=1,all),,drop=FALSE]
@@ -146,6 +148,8 @@ simpar <- function(nsim,theta,covar,omega,sigma,odf=NULL,sdf=NULL,digits=4,min=-
 #' @param df degrees of freedom; passed to rgamma
 #' @param prec pending
 #'
+#' @noRd
+#'
 riwish <- function(s,df,prec){
   if (df<=0) stop ("Inverse Wishart algorithm requires df>0")
   R <- diag(sqrt(2*rgamma(s,(df + s  - 1:s)/2)))
@@ -162,6 +166,7 @@ riwish <- function(s,df,prec){
 #' @param df degrees of freedom; passed to rinvchisq
 #' @param cov the matrix to simulate
 #'
+#' @noRd
 riwish_diag <- function(n, df, cov) {
   # implement riwish for a diagonal matrix
   # this is a series of calls to metrumrg::rinvchisq
@@ -175,6 +180,7 @@ riwish_diag <- function(n, df, cov) {
 #' @param df degrees of freedom; passed to rchisq
 #' @param cov the matrix to simulate
 #'
+#' @noRd
 rinvchisq <- function(n,df,cov) df*as.vector(cov)/rchisq(n, df)
 
 #' Handle diagonal omega or sigma
@@ -184,6 +190,7 @@ rinvchisq <- function(n,df,cov) df*as.vector(cov)/rchisq(n, df)
 #' @param cov the matrix to simulate
 #' @param diagnal TRUE or FALSE; whether cov is a diagnal matrix or not
 #'
+#' @noRd
 simblock <- function(n,df,cov,diagnal = FALSE) {
   diagnal = isTRUE(diagnal)
   if(df < nrow(cov)) stop('df is less than matrix length')
@@ -204,6 +211,7 @@ simblock <- function(n,df,cov,diagnal = FALSE) {
 #' make positive definite matrix
 #'
 #' @param x matrix for calculation
+#' @noRd
 posmat <- function(x,...) {
   if(any(diag(x) <=0)) stop("matrix cannot be made positive-definite")
   if(!is.square(x))stop('x is not square')
@@ -227,6 +235,7 @@ posmat <- function(x,...) {
 #' Internal metrumrg function to generate names for outputs
 #'
 #' @param x list of matrix for calculation
+#' @noRd
 impliedNames <- function(x){
   vars <- sum(x)
   crit <- cumsum(x)-x+1
