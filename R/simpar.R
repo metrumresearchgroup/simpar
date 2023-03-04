@@ -119,8 +119,8 @@ simpar <- function(nsim,theta,covar,omega,sigma,odf=NULL,sdf=NULL,digits=4,min=-
   # replace 120-130 using simulate_matrix()
   omg <- lapply(1:length(odf),function(x)list(n=nsim,df=odf[[x]],cov=omega[[x]]))
   sig <- lapply(1:length(sdf),function(x)list(n=nsim,df=sdf[[x]],cov=sigma[[x]]))
-  omg <- do.call(cbind,lapply(omg,function(x)do.call(simblock,x)))
-  sig <- do.call(cbind,lapply(sig,function(x)do.call(simblock,x)))
+  omg <- do.call(cbind,lapply(omg,function(x)do.call(sblock,x)))
+  sig <- do.call(cbind,lapply(sig,function(x)do.call(sblock,x)))
   dimnames(mvr) <- dimnames(omg) <- dimnames(sig) <- list(NULL,NULL)
   dimnames(mvr)[[2]] <- paste('TH',seq(length.out=dim(mvr)[[2]]),sep='.')
   dimnames(mvr)[[1]] <- seq(length.out=dim(mvr)[[1]])
@@ -183,7 +183,7 @@ riwish_diag <- function(n, df, cov) {
 #' @noRd
 rinvchisq <- function(n,df,cov) df*as.vector(cov)/rchisq(n, df)
 
-#' Handle diagonal omega or sigma
+#' Handle diagonal omega or sigma as metrumrg
 #'
 #' @param n number of simulations to perform
 #' @param df degrees of freedom
@@ -197,6 +197,29 @@ simblock <- function(n,df,cov,diagnal = FALSE) {
   if(length(cov)==1) return(rinvchisq(n,df,cov))
   # Handle diagonal omega or sigma
   if(is.diagonal(cov) && diagnal) {
+    res <- do.call(cbind, riwish_diag(n, df, cov))
+    return(res)
+  }
+  # Handle omega or sigma with off diagonal elements
+  s <- dim(cov)[1]
+  ncols <- s*(s+1)/2
+  res <- matrix(nrow=n, ncol=ncols)
+  for(i in 1:n)res[i,] <- half(posmat(riwish(s,df-s+1,df*cov)))
+  res
+}
+
+#' metrumrg::simblock replacement that handles diagonal omega or sigma
+#'
+#' @param n number of simulations; scalar
+#' @param df degrees of freedom; scalar
+#' @param cov a single matrix to simulate
+#'
+#' @noRd
+sblock <- function(n,df,cov) {
+  if(df < nrow(cov)) stop('df is less than matrix length')
+  if(length(cov)==1) return(rinvchisq(n,df,cov))
+  # Handle diagonal omega or sigma
+  if(is.diagonal(cov)) {
     res <- do.call(cbind, riwish_diag(n, df, cov))
     return(res)
   }
