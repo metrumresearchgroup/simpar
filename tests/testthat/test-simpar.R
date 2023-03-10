@@ -3,22 +3,6 @@ library(testthat)
 
 context("test-simpar")
 
-bmat <- function (..., context = NULL) {
-  x <- list(...)
-  x <- as.numeric(x)
-  if (length(x) == 1)
-    return(matrix(x, nrow = 1, ncol = 1))
-  n <- 0.5 * (sqrt(1 - 4 * (-2 * length(x))) - 1)
-  if (!n == as.integer(n)) {
-    stop(paste0("Block matrix has invalid specification (",
-                context, ")."), call. = FALSE)
-  }
-  mat <- diag(n)
-  mat[upper.tri(mat, diag = TRUE)] <- x
-  mat <- mat + t(mat) - diag(diag(mat))
-  mat
-}
-
 omega <- bmat(1, 0, 3)
 sigma <- matrix(1)
 theta <- c(1,2,3)
@@ -144,7 +128,7 @@ test_that("outputs match metrumrg implementation", {
   theta <- c(1,2,3,4,5)/10
   covar <- diag(0.1, 5)/seq(1,5)
 
-  # expect different behavior when diag matrix
+  # expect same behavior when diag matrix
   omega1 <- diag(c(1,2,3,4))
   sigma1 <- diag(c(10,100))
 
@@ -156,7 +140,7 @@ test_that("outputs match metrumrg implementation", {
   a <- simpar(5, theta, covar, omega1, sigma1)
   set.seed(12345)
   b <- metrumrg::simpar(5, theta, covar, omega1, sigma1)
-  expect_false(all(a == b))
+  expect_identical(a,b)
 
   set.seed(12345)
   a <- simpar(5, theta, covar, omega2, sigma2)
@@ -178,54 +162,167 @@ test_that("minimum degrees of freedom is nrow", {
   )
 })
 
-test_that("simblock: zeros are in diagnal only matrix", {
+# simblock
+test_that("simblock: zeros are in diagonal only matrix", {
   cov <- matrix(data = c(1,0,0,1), nrow = 2, ncol = 2)
 
-  ans <- simpar:::simblock(n = 3, df = 100, cov = cov, diagnal = TRUE)
+  ans <- simpar:::simblock(n = 3, df = 100, cov = cov, diagonal = TRUE)
   expect_true(all(ans[, 2] == 0))
 })
 
-test_that("simblock: simulate non-diagnal matrix", {
+test_that("simblock: simulate non-diagonal matrix", {
   cov <- matrix(data = c(1,0.1,0.1,1), nrow = 2, ncol = 2)
 
-  ans <- simpar:::simblock(n = 3, df = 100, cov = cov, diagnal = TRUE)
+  ans <- simpar:::simblock(n = 3, df = 100, cov = cov, diagonal = TRUE)
   expect_true(all(ans[, 2] != 0))
 })
 
-test_that("sblock: zeros are in diagnal only matrix", {
+# sblock
+test_that("sblock: zeros are in diagonal only matrix", {
   cov <- matrix(data = c(1,0,0,1), nrow = 2, ncol = 2)
 
   ans <- simpar:::sblock(n = 3, df = 100, cov = cov)
   expect_true(all(ans[, 2] == 0))
 })
 
-test_that("sblock: simulate non-diagnal matrix", {
+test_that("sblock: simulate non-diagonal matrix", {
   cov <- matrix(data = c(1,0.1,0.1,1), nrow = 2, ncol = 2)
 
   ans <- simpar:::sblock(n = 3, df = 100, cov = cov)
   expect_true(all(ans[, 2] != 0))
 })
 
-test_that("simpar: diagnal omega matrix", {
+# omega_diag argument in simpar
+test_that("simpar: diagonal omega matrix with omega_diag == TRUE", {
+  theta <- c(1,2,3,4)
+  covar <- diag(0.1, 4, 4)
+  omega <- bmat(1, 0, 3)
+  sigma <- matrix(1)
+
+  ans <- simpar(n = 5, theta, covar, omega, sigma, 10, 10, omega_diag = TRUE)
+  expect_true(all(ans[, 6] == 0))
+})
+
+test_that("simpar: diagonal omega matrix with omega_diag == FALSE", {
   theta <- c(1,2,3,4)
   covar <- diag(0.1, 4, 4)
   omega <- bmat(1, 0, 3)
   sigma <- matrix(1)
 
   ans <- simpar(n = 5, theta, covar, omega, sigma, 10, 10)
-  expect_true(all(ans[, 6] == 0))
+  expect_true(all(ans[, 6] != 0)) # essentially same behaviour as metrumrg::simpar
 })
 
-test_that("simpar: full omega matrix", {
+test_that("simpar: full omega matrix with omega_diag == TRUE", {
+  theta <- c(1,2,3,4)
+  covar <- diag(0.1, 4, 4)
+  omega <- bmat(1, 0.1, 3)
+  sigma <- matrix(1)
+  ans <- simpar(n = 5, theta, covar, omega, sigma, 10, 10, omega_diag = TRUE)
+  expect_true(all(ans[, 6] != 0)) # essentially same behaviour as metrumrg::simpar
+})
+
+test_that("simpar: full omega matrix with omega_diag == FALSE", {
   theta <- c(1,2,3,4)
   covar <- diag(0.1, 4, 4)
   omega <- bmat(1, 0.1, 3)
   sigma <- matrix(1)
 
   ans <- simpar(n = 5, theta, covar, omega, sigma, 10, 10)
-  expect_false(all(ans[, 6] == 0))
+  expect_true(all(ans[, 6] != 0))
 })
 
+# sigma_diag argument in simpar
 
+test_that("simpar: diagonal sigma matrix with sigma_diag == TRUE", {
+  theta <- c(1,2,3,4)
+  covar <- diag(0.1, 4, 4)
+  omega <- bmat(1, 0, 3)
+  sigma <- bmat(1, 0, 3)
+
+  ans <- simpar(n = 5, theta, covar, omega, sigma, 10, 10, sigma_diag = TRUE)
+  expect_true(all(ans[, 9] == 0))
+})
+
+test_that("simpar: diagonal sigma matrix with sigma_diag == FALSE", {
+  theta <- c(1,2,3,4)
+  covar <- diag(0.1, 4, 4)
+  omega <- bmat(1, 0, 3)
+  sigma <- bmat(1, 0, 3)
+
+  ans <- simpar(n = 5, theta, covar, omega, sigma, 10, 10)
+  expect_true(all(ans[, 9] != 0)) # essentially same behaviour as metrumrg::simpar
+})
+
+test_that("simpar: full sigma matrix with sigma_diag == TRUE", {
+  theta <- c(1,2,3,4)
+  covar <- diag(0.1, 4, 4)
+  omega <- bmat(1, 0, 3)
+  sigma <- bmat(1, 0.1, 3)
+  ans <- simpar(n = 5, theta, covar, omega, sigma, 10, 10, sigma_diag = TRUE)
+  expect_true(all(ans[, 9] != 0)) # essentially same behaviour as metrumrg::simpar
+})
+
+test_that("simpar: full sigma matrix with sigma_diag == FALSE", {
+  theta <- c(1,2,3,4)
+  covar <- diag(0.1, 4, 4)
+  omega <- bmat(1, 0, 3)
+  sigma <- bmat(1, 0.1, 3)
+
+  ans <- simpar(n = 5, theta, covar, omega, sigma, 10, 10)
+  expect_true(all(ans[, 9] != 0))
+})
+
+# # simple omega and sigma matrix
+theta <- c(1,2,3,4)
+covar <- diag(0.1, 4, 4)
+omega <- bmat(1, 0, 3)
+sigma <- bmat(0.1, 0, 0.3)
+
+simpar(nsim = 1, theta, covar, omega, sigma, 10, 10, omega_diag = TRUE, sigma_diag = TRUE)
+simpar(nsim = 5, theta, covar, omega, sigma, 10, 10, omega_diag = TRUE, sigma_diag = TRUE)
+simpar(nsim = 1, theta, covar, omega, sigma, 10, 10, omega_diag = TRUE, sigma_diag = TRUE, mrgsolve_style = TRUE)
+simpar(nsim = 5, theta, covar, omega, sigma, 10, 10, omega_diag = TRUE, sigma_diag = TRUE, mrgsolve_style = TRUE)
+#
+# complex omega matrix and simple sigma matrix
+theta <- c(1,2,3,4)
+covar <- diag(0.1, 4, 4)
+omega <- list(bmat(1, 0.1, 1, 0.1, 0.1, 1), # 3x3
+              bmat(1, 0, 3),
+              bmat(2, 0.5, 6))
+sigma <- matrix(1)
+
+simpar(n = 1, theta, covar, omega, sigma, c(10,10,10), 10, omega_diag = TRUE, sigma_diag = TRUE)
+simpar(n = 5, theta, covar, omega, sigma, c(10,10,10), 10, omega_diag = TRUE, sigma_diag = TRUE)
+simpar(n = 1, theta, covar, omega, sigma, c(10,10,10), 10, omega_diag = TRUE, sigma_diag = TRUE, mrgsolve_style = TRUE)
+simpar(n = 5, theta, covar, omega, sigma, c(10,10,10), 10, omega_diag = TRUE, sigma_diag = TRUE, mrgsolve_style = TRUE)
+#
+# simple omega matrix and complex sigma matrix
+theta <- c(1,2,3,4)
+covar <- diag(0.1, 4, 4)
+omega <- bmat(1, 0, 3)
+sigma <- list(bmat(1, 0.1, 1, 0.1, 0.1, 1), # 3x3
+              bmat(1, 0, 3),
+              bmat(2, 0.5, 6))
+
+simpar(n = 1, theta, covar, omega, sigma, 10, c(10,10,10), omega_diag = TRUE, sigma_diag = TRUE)
+simpar(n = 5, theta, covar, omega, sigma, 10, c(10,10,10), omega_diag = TRUE, sigma_diag = TRUE)
+simpar(n = 1, theta, covar, omega, sigma, 10, c(10,10,10), omega_diag = TRUE, sigma_diag = TRUE, mrgsolve_style = TRUE)
+simpar(n = 5, theta, covar, omega, sigma, 10, c(10,10,10), omega_diag = TRUE, sigma_diag = TRUE, mrgsolve_style = TRUE)
+
+# complex omega and sigma matrix
+theta <- c(1,2,3,4)
+covar <- diag(0.1, 4, 4)
+omega <- list(bmat(2, 0.1, 2, 0.1, 0.1, 2), # 3x3
+              bmat(2, 0, 6),
+              bmat(4, 0.5, 12))
+sigma <- list(bmat(1, 0.1, 1, 0.1, 0.1, 1), # 3x3
+              bmat(1, 0, 3),
+              bmat(2, 0.5, 6))
+
+simpar(n = 1, theta, covar, omega, sigma, c(10,10,10), c(10,10,10), omega_diag = TRUE, sigma_diag = TRUE)
+simpar(n = 5, theta, covar, omega, sigma, c(10,10,10), c(10,10,10), omega_diag = TRUE, sigma_diag = TRUE)
+simpar(n = 1, theta, covar, omega, sigma, c(10,10,10), c(10,10,10), omega_diag = TRUE, sigma_diag = TRUE, mrgsolve_style = TRUE)
+simpar(n = 5, theta, covar, omega, sigma, c(10,10,10), c(10,10,10), omega_diag = TRUE, sigma_diag = TRUE, mrgsolve_style = TRUE)
 
 

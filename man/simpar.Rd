@@ -14,7 +14,10 @@ simpar(
   sdf = NULL,
   digits = 4,
   min = -Inf,
-  max = Inf
+  max = Inf,
+  omega_diag = FALSE,
+  sigma_diag = FALSE,
+  mrgsolve_style = FALSE
 )
 }
 \arguments{

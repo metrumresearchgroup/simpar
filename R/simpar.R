@@ -89,14 +89,17 @@ glue <- function(...) {
 #')
 #'
 #' @export
-simpar <- function(nsim,theta,covar,omega,sigma,odf=NULL,sdf=NULL,digits=4,min=-Inf,max=Inf){
+simpar <- function(nsim,theta,covar,omega,sigma,odf=NULL,sdf=NULL,
+                   digits=4,min=-Inf,max=Inf,omega_diag=FALSE,sigma_diag=FALSE,mrgsolve_style=FALSE){
   covar <- as.matrix(covar)
   if(ord(covar)!=length(theta))stop('order of covar is not equal to length theta')
   if(det(covar) < 0) stop("covar is not positive-definite.")
   if(!is.list(omega)) omega <- list(omega)
   if(!is.list(sigma)) sigma <- list(sigma)
   omega <- lapply(omega,as.matrix)
+  omega_dim <- lapply(lapply(omega,as.matrix), nrow)
   sigma <- lapply(sigma,as.matrix)
+  sigma_dim <- lapply(lapply(sigma,as.matrix), nrow)
   if(is.null(odf))odf <- sapply(omega,length)
   if(is.null(sdf))sdf <- sapply(sigma,length)
   npar <- length(theta) + sum(sapply(omega,function(x)length(half(x)))) + sum(sapply(sigma,function(x)length(half(x))))
@@ -116,11 +119,10 @@ simpar <- function(nsim,theta,covar,omega,sigma,odf=NULL,sdf=NULL,digits=4,min=-
   if(any(sdf < sapply(sigma,nrow)))stop('sdf[n] is less than number of rows in corresponding matrix')
   mvr <- mvrnorm(nsim,theta,covar)
   if(nsim==1)mvr <- t(as.matrix(mvr))
-  # replace 120-130 using simulate_matrix()
-  omg <- lapply(1:length(odf),function(x)list(n=nsim,df=odf[[x]],cov=omega[[x]]))
-  sig <- lapply(1:length(sdf),function(x)list(n=nsim,df=sdf[[x]],cov=sigma[[x]]))
-  omg <- do.call(cbind,lapply(omg,function(x)do.call(sblock,x)))
-  sig <- do.call(cbind,lapply(sig,function(x)do.call(sblock,x)))
+  omg <- lapply(1:length(odf),function(x)list(n=nsim,df=odf[[x]],cov=omega[[x]],diagonal=omega_diag))
+  sig <- lapply(1:length(sdf),function(x)list(n=nsim,df=sdf[[x]],cov=sigma[[x]],diagonal=sigma_diag))
+  omg <- do.call(cbind,lapply(omg,function(x)do.call(simblock,x)))
+  sig <- do.call(cbind,lapply(sig,function(x)do.call(simblock,x)))
   dimnames(mvr) <- dimnames(omg) <- dimnames(sig) <- list(NULL,NULL)
   dimnames(mvr)[[2]] <- paste('TH',seq(length.out=dim(mvr)[[2]]),sep='.')
   dimnames(mvr)[[1]] <- seq(length.out=dim(mvr)[[1]])
@@ -139,7 +141,44 @@ simpar <- function(nsim,theta,covar,omega,sigma,odf=NULL,sdf=NULL,digits=4,min=-
   sim <- sim[apply(t(t(sim)-max)<=0,MARGIN=1,all),,drop=FALSE]
   loss <- nsim - nrow(sim)
   if(loss)warning(loss,' of ',nsim,' rows dropped',call.=FALSE,immediate.=TRUE)
-  sim
+
+  sim2 <- as.data.frame(sim)
+
+  if (mrgsolve_style == TRUE){
+
+    theta <- sim2[,grepl("TH",colnames(sim2))]
+    names(theta) <- gsub("\\.", "", names(theta))
+    names(theta) <- gsub("TH", "THETA", names(theta))
+    theta <- split(theta, seq(nsim))
+    theta <- unname(theta) # remove names
+
+    omega <- trans_matrix(sim = sim2, nsim = nsim, matrix_type = "OM", dim = omega_dim)
+    sigma <- trans_matrix(sim = sim2, nsim = nsim, matrix_type = "SG", dim = sigma_dim)
+
+    xx <- list()
+    xx_omega <- rep_len(list(), nsim)
+    xx_sigma <- rep_len(list(), nsim)
+
+    for (i in 1:nsim){
+
+      for (j in 1:length(omega)){
+        xx_omega[[i]][[j]] <- omega[[j]][[i]]
+      }
+
+      for (k in 1:length(sigma)){
+        xx_sigma[[i]][[k]] <- sigma[[k]][[i]]
+      }
+
+      xx[[i]] <- list(theta[[i]], xx_omega[[i]], xx_sigma[[i]])
+
+      names(xx[[i]]) <- c("param", "omega", "sigma")
+
+    }
+
+    sim <- xx
+  }
+
+  return(sim)
 }
 
 #' Draw sample from a inverse wishart distribution
@@ -188,38 +227,15 @@ rinvchisq <- function(n,df,cov) df*as.vector(cov)/rchisq(n, df)
 #' @param n number of simulations to perform
 #' @param df degrees of freedom
 #' @param cov the matrix to simulate
-#' @param diagnal TRUE or FALSE; whether cov is a diagnal matrix or not
+#' @param diagonal TRUE or FALSE; whether cov is a diagonal matrix or not
 #'
 #' @noRd
-simblock <- function(n,df,cov,diagnal = FALSE) {
-  diagnal = isTRUE(diagnal)
+simblock <- function(n,df,cov,diagonal = FALSE) {
+  diagonal = isTRUE(diagonal)
   if(df < nrow(cov)) stop('df is less than matrix length')
   if(length(cov)==1) return(rinvchisq(n,df,cov))
   # Handle diagonal omega or sigma
-  if(is.diagonal(cov) && diagnal) {
-    res <- do.call(cbind, riwish_diag(n, df, cov))
-    return(res)
-  }
-  # Handle omega or sigma with off diagonal elements
-  s <- dim(cov)[1]
-  ncols <- s*(s+1)/2
-  res <- matrix(nrow=n, ncol=ncols)
-  for(i in 1:n)res[i,] <- half(posmat(riwish(s,df-s+1,df*cov)))
-  res
-}
-
-#' metrumrg::simblock replacement that handles diagonal omega or sigma
-#'
-#' @param n number of simulations; scalar
-#' @param df degrees of freedom; scalar
-#' @param cov a single matrix to simulate
-#'
-#' @noRd
-sblock <- function(n,df,cov) {
-  if(df < nrow(cov)) stop('df is less than matrix length')
-  if(length(cov)==1) return(rinvchisq(n,df,cov))
-  # Handle diagonal omega or sigma
-  if(is.diagonal(cov)) {
+  if(is.diagonal(cov) && diagonal) {
     res <- do.call(cbind, riwish_diag(n, df, cov))
     return(res)
   }
@@ -266,5 +282,126 @@ impliedNames <- function(x){
   good <- outer(colSums(diag),rowSums(diag),FUN='==')
   half <- half(good)
   names(half[half])
+}
+
+#' Convert a omega / sigma matrix from simpar format to a mrgsolve format
+#'
+#' @param sim simulated matrix in simpar style
+#' @param nsim number of simulation
+#' @param matrix_type type of matrix, either "OM" or "SG"
+#' @param dim dimensions of matrix
+#'
+#' @noRd
+trans_matrix <- function(sim, nsim, matrix_type, dim){
+
+  matrix <- as.data.frame(sim[,grepl(matrix_type,colnames(sim))])
+
+  dim2 <- lapply(dim, function(x) x*(x+1)/2)
+  index <- lapply(cumsum(dim2), seq)
+
+  xx <- list()
+  for (i in 1:length(dim2)){
+    xx[[i]] <- tail(index[[i]], n = dim2[[i]])
+  }
+
+  matrix <- lapply(xx, function(x) as.data.frame(matrix[,x]))
+
+  matrix <- lapply(matrix, function(x) mrgsolve::as_bmat(x))
+
+
+  # matrix <- lapply(seq(nsim), function(nn) {
+  #   lapply(matrix, function(x) {
+  #     x[[nn]]
+  #   })
+  # })
+
+  return(matrix)
+
+}
+
+#' metrumrg::simblock replacement that handles diagonal omega or sigma
+#'
+#' @param n number of simulations; scalar
+#' @param df degrees of freedom; scalar
+#' @param cov a single matrix to simulate
+#'
+#' @noRd
+sblock <- function(n,df,cov) {
+  if(df < nrow(cov)) stop('df is less than matrix length')
+  if(length(cov)==1) return(rinvchisq(n,df,cov))
+  # Handle diagonal omega or sigma
+  if(is.diagonal(cov)) {
+    res <- do.call(cbind, riwish_diag(n, df, cov))
+    return(res)
+  }
+  # Handle omega or sigma with off diagonal elements
+  s <- dim(cov)[1]
+  ncols <- s*(s+1)/2
+  res <- matrix(nrow=n, ncol=ncols)
+  for(i in 1:n)res[i,] <- half(posmat(riwish(s,df-s+1,df*cov)))
+  res
+}
+
+#' Simulate OMEGA or SIGMA matrices
+#'
+#' @param n number of simulations
+#' @param df degrees of freedom; must be a list of numeric values with same
+#' length as `cov`
+#' @param cov a list of numeric matrices
+#' @param prefix added to numbered outputs; only used when `style` is `"simpar"`
+#'
+#' @noRd
+#'
+simulate_matrix <- function(n, df, cov, prefix = "OM", style = c("simpar", "mrgsolve")) {
+  stopifnot(is.list(cov))
+  stopifnot(all(sapply(cov, inherits, "matrix")))
+  stopifnot(length(df)==length(cov))
+  stopifnot(all(sapply(df, is.numeric)))
+  stopifnot(length(n)==1)
+  stopifnot(is.numeric(n))
+  style <- match.arg(style)
+  omg <- lapply(seq_along(cov), function(x) list(n = n, df = df[[x]], cov = cov[[x]]))
+
+  # simpar style output
+  if(style=="simpar") {
+    omg <- do.call(cbind,lapply(omg, function(x) do.call(sblock, x)))
+    labels <- paste0(prefix, impliedNames(sapply(cov, ord)))
+    dimnames(omg) <- list(NULL,labels)
+    return(omg)
+  }
+
+  # mrgsolve style output
+  if(style=="mrgsolve") {
+    requireNamespace("mrgsolve")
+    omg <- lapply(omg, function(x) do.call(sblock,x))
+    omg <- lapply(omg, function(x) mrgsolve::as_bmat(as.data.frame(x)))
+    omg <- lapply(seq(n), function(nn) {
+      lapply(omg, function(x) {
+        x[[nn]]
+      })
+    })
+    return(omg)
+  }
+  stop("something bad happened")
+}
+
+#' Build a matrix
+#'
+#' @noRd
+
+bmat <- function (..., context = NULL) {
+  x <- list(...)
+  x <- as.numeric(x)
+  if (length(x) == 1)
+    return(matrix(x, nrow = 1, ncol = 1))
+  n <- 0.5 * (sqrt(1 - 4 * (-2 * length(x))) - 1)
+  if (!n == as.integer(n)) {
+    stop(paste0("Block matrix has invalid specification (",
+                context, ")."), call. = FALSE)
+  }
+  mat <- diag(n)
+  mat[upper.tri(mat, diag = TRUE)] <- x
+  mat <- mat + t(mat) - diag(diag(mat))
+  mat
 }
 
