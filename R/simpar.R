@@ -90,10 +90,17 @@ glue <- function(...) {
 #'
 #' @export
 simpar <- function(nsim,theta,covar,omega,sigma,odf=NULL,sdf=NULL,
-                   digits=4,min=-Inf,max=Inf,omega_diag=FALSE,sigma_diag=FALSE,mrgsolve_style=FALSE){
+                   digits=4,min=-Inf,max=Inf,
+                   omega_diag=FALSE,sigma_diag=FALSE,mrgsolve_style=FALSE){
   covar <- as.matrix(covar)
-  if(ord(covar)!=length(theta))stop('order of covar is not equal to length theta')
-  if(det(covar) < 0) stop("covar is not positive-definite.")
+
+  # Error checks 1
+  if(ord(covar)!=length(theta)){
+    stop('order of covar is not equal to length theta', call. = FALSE)}
+
+  if(det(covar) < 0){
+    stop("covar is not positive-definite.", call. = FALSE)}
+
   if(!is.list(omega)) omega <- list(omega)
   if(!is.list(sigma)) sigma <- list(sigma)
   omega <- lapply(omega,as.matrix)
@@ -102,25 +109,48 @@ simpar <- function(nsim,theta,covar,omega,sigma,odf=NULL,sdf=NULL,
   sigma_dim <- lapply(lapply(sigma,as.matrix), nrow)
   if(is.null(odf))odf <- sapply(omega,length)
   if(is.null(sdf))sdf <- sapply(sigma,length)
-  npar <- length(theta) + sum(sapply(omega,function(x)length(half(x)))) + sum(sapply(sigma,function(x)length(half(x))))
+
+  # Error checks 2
+  if(!all(sapply(omega,is.square))){
+    stop('not all omega blocks are square', call. = FALSE)}
+
+  if(!all(sapply(sigma,is.square))){
+    stop('not all sigma blocks are square', call. = FALSE)}
+
+  npar <- length(theta) +
+    sum(sapply(omega,function(x)length(half(x)))) +
+    sum(sapply(sigma,function(x)length(half(x))))
   if(length(min)==1) min <- rep(min,npar)
   if(length(max)==1) max <- rep(max,npar)
   if(length(min)!=npar)min <- c(min, rep(-Inf,npar-length(min)))
   if(length(max)!=npar)max <- c(max, rep( Inf,npar-length(max)))
-  if(length(max)!=npar)stop('length of max should be one, or number of parameters')
-  if(length(min)!=npar)stop('length of min should be one, or number of parameters')
-  if(!all(sapply(omega,is.square)))stop('not all omega blocks are square')
-  if(!all(sapply(sigma,is.square)))stop('not all sigma blocks are square')
-  if( any(sapply(omega,function(x)det(x)<0)))stop('not all omega blocks are positive-definite')
-  if( any(sapply(sigma,function(x)det(x)<0)))stop('not all sigma blocks are positive-definite')
-  if(length(odf)!=length(omega))stop('length odf differs from length omega')
-  if(length(sdf)!=length(sigma))stop('length sdf differs from length sigma')
-  if(any(odf < sapply(omega,nrow)))stop('odf[n] is less than number of rows in corresponding matrix')
-  if(any(sdf < sapply(sigma,nrow)))stop('sdf[n] is less than number of rows in corresponding matrix')
+
+  # Error checks 3
+  ### not needed since the length of `min` and `max` was fixed upfront
+  # if(length(max)!=npar){
+  #   stop('length of max should be one, or number of parameters', call. = FALSE)}
+  # if(length(min)!=npar){
+  #   stop('length of min should be one, or number of parameters', call. = FALSE)}
+  if( any(sapply(omega,function(x)det(x)<0))){
+    stop('not all omega blocks are positive-definite', call. = FALSE)}
+  if( any(sapply(sigma,function(x)det(x)<0))){
+    stop('not all sigma blocks are positive-definite', call. = FALSE)}
+  if(length(odf)!=length(omega)){
+    stop('length odf differs from length omega', call. = FALSE)}
+  if(length(sdf)!=length(sigma)){
+    stop('length sdf differs from length sigma', call. = FALSE)}
+  if(any(odf < sapply(omega,nrow))){
+    stop('odf[n] is less than number of rows in corresponding matrix', call. = FALSE)}
+  if(any(sdf < sapply(sigma,nrow))){
+    stop('sdf[n] is less than number of rows in corresponding matrix', call. = FALSE)}
+
+  # Simulate
   mvr <- mvrnorm(nsim,theta,covar)
   if(nsim==1)mvr <- t(as.matrix(mvr))
-  omg <- lapply(1:length(odf),function(x)list(n=nsim,df=odf[[x]],cov=omega[[x]],diagonal=omega_diag))
-  sig <- lapply(1:length(sdf),function(x)list(n=nsim,df=sdf[[x]],cov=sigma[[x]],diagonal=sigma_diag))
+  omg <- lapply(1:length(odf),function(x)list(n=nsim,df=odf[[x]],
+                                              cov=omega[[x]],diagonal=omega_diag))
+  sig <- lapply(1:length(sdf),function(x)list(n=nsim,df=sdf[[x]],
+                                              cov=sigma[[x]],diagonal=sigma_diag))
   omg <- do.call(cbind,lapply(omg,function(x)do.call(simblock,x)))
   sig <- do.call(cbind,lapply(sig,function(x)do.call(simblock,x)))
   dimnames(mvr) <- dimnames(omg) <- dimnames(sig) <- list(NULL,NULL)
@@ -131,6 +161,7 @@ simpar <- function(nsim,theta,covar,omega,sigma,odf=NULL,sdf=NULL,
   dimnames(sig)[[2]] <- glue('SG',impliedNames(sapply(sigma,ord)))
   dimnames(sig)[[1]] <- seq(length.out=dim(sig)[[1]])
 
+  # Output in metrumrg style
   sim <- cbind(mvr,omg,sig)
   sim <- round(signif(sim,digits),6)
   sim <- sim[apply(t(t(sim)-min)>=0,MARGIN=1,all),,drop=FALSE]
@@ -142,6 +173,7 @@ simpar <- function(nsim,theta,covar,omega,sigma,odf=NULL,sdf=NULL,
   loss <- nsim - nrow(sim)
   if(loss)warning(loss,' of ',nsim,' rows dropped',call.=FALSE,immediate.=TRUE)
 
+  # Output in mrgsolve style
   sim2 <- as.data.frame(sim)
 
   if (mrgsolve_style == TRUE){
@@ -152,8 +184,10 @@ simpar <- function(nsim,theta,covar,omega,sigma,odf=NULL,sdf=NULL,
     theta <- split(theta, seq(nsim))
     theta <- unname(theta) # remove names
 
-    omega <- trans_matrix(sim = sim2, nsim = nsim, matrix_type = "OM", dim = omega_dim)
-    sigma <- trans_matrix(sim = sim2, nsim = nsim, matrix_type = "SG", dim = sigma_dim)
+    omega <- trans_matrix(sim = sim2, nsim = nsim,
+                          matrix_type = "OM", dim = omega_dim)
+    sigma <- trans_matrix(sim = sim2, nsim = nsim,
+                          matrix_type = "SG", dim = sigma_dim)
 
     xx <- list()
     xx_omega <- rep_len(list(), nsim)
@@ -190,7 +224,8 @@ simpar <- function(nsim,theta,covar,omega,sigma,odf=NULL,sdf=NULL,
 #' @noRd
 #'
 riwish <- function(s,df,prec){
-  if (df<=0) stop ("Inverse Wishart algorithm requires df>0")
+  if (df<=0){
+    stop ("Inverse Wishart algorithm requires df>0", call. = FALSE)}
   R <- diag(sqrt(2*rgamma(s,(df + s  - 1:s)/2)))
   R[outer(1:s, 1:s,  "<")] <- rnorm (s*(s-1)/2)
   S <- t(solve(R))%*% chol(prec)
@@ -232,7 +267,8 @@ rinvchisq <- function(n,df,cov) df*as.vector(cov)/rchisq(n, df)
 #' @noRd
 simblock <- function(n,df,cov,diagonal = FALSE) {
   diagonal = isTRUE(diagonal)
-  if(df < nrow(cov)) stop('df is less than matrix length')
+  if(df < nrow(cov)){
+    stop('df is less than matrix length', call. = FALSE)}
   if(length(cov)==1) return(rinvchisq(n,df,cov))
   # Handle diagonal omega or sigma
   if(is.diagonal(cov) && diagonal) {
@@ -252,7 +288,9 @@ simblock <- function(n,df,cov,diagonal = FALSE) {
 #' @param x matrix for calculation
 #' @noRd
 posmat <- function(x,...) {
-  if(any(diag(x) <=0)) stop("matrix cannot be made positive-definite")
+  if(any(diag(x) <=0)){
+    stop("matrix cannot be made positive-definite", call. = FALSE)
+  }
   if(!is.square(x))stop('x is not square')
   sign <- sign(x)
   x <- abs(x)
@@ -327,7 +365,8 @@ trans_matrix <- function(sim, nsim, matrix_type, dim){
 #'
 #' @noRd
 sblock <- function(n,df,cov) {
-  if(df < nrow(cov)) stop('df is less than matrix length')
+  if(df < nrow(cov)){
+    stop('df is less than matrix length', call. = FALSE)}
   if(length(cov)==1) return(rinvchisq(n,df,cov))
   # Handle diagonal omega or sigma
   if(is.diagonal(cov)) {
@@ -352,13 +391,26 @@ sblock <- function(n,df,cov) {
 #'
 #' @noRd
 #'
-simulate_matrix <- function(n, df, cov, prefix = "OM", style = c("simpar", "mrgsolve")) {
-  stopifnot(is.list(cov))
-  stopifnot(all(sapply(cov, inherits, "matrix")))
-  stopifnot(length(df)==length(cov))
-  stopifnot(all(sapply(df, is.numeric)))
-  stopifnot(length(n)==1)
-  stopifnot(is.numeric(n))
+simulate_matrix <- function(n, df, cov, prefix = "OM", style = "simpar") {
+
+  # Error checks
+  if (!is.list(cov)) stop("`cov` must be a list", call. = FALSE)
+  if (!all(sapply(cov, inherits, "matrix"))){
+    stop("Elements in `cov` must be matrices", call. = FALSE)}
+  if (length(df)!=length(cov)){
+    stop("Length of `df` must be the same as `cov`", call. = FALSE)}
+  if (!all(sapply(df, is.numeric))){
+    stop("Elements in `df` must be numeric", call. = FALSE)}
+  if (length(n) != 1)stop("`n` must be a scalar", call. = FALSE)
+  if (!is.numeric(n))stop("`n` must be numeric", call. = FALSE)
+
+  # stopifnot(is.list(cov))
+  # stopifnot(all(sapply(cov, inherits, "matrix")))
+  # stopifnot(length(df)==length(cov))
+  # stopifnot(all(sapply(df, is.numeric)))
+  # stopifnot(length(n)==1)
+  # stopifnot(is.numeric(n))
+
   style <- match.arg(style)
   omg <- lapply(seq_along(cov), function(x) list(n = n, df = df[[x]], cov = cov[[x]]))
 
@@ -382,6 +434,7 @@ simulate_matrix <- function(n, df, cov, prefix = "OM", style = c("simpar", "mrgs
     })
     return(omg)
   }
+
   stop("something bad happened")
 }
 

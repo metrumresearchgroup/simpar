@@ -273,56 +273,51 @@ test_that("simpar: full sigma matrix with sigma_diag == FALSE", {
   expect_true(all(ans[, 9] != 0))
 })
 
-# # simple omega and sigma matrix
-theta <- c(1,2,3,4)
-covar <- diag(0.1, 4, 4)
-omega <- bmat(1, 0, 3)
-sigma <- bmat(0.1, 0, 0.3)
+# Check returned error messages
 
-simpar(nsim = 1, theta, covar, omega, sigma, 10, 10, omega_diag = TRUE, sigma_diag = TRUE)
-simpar(nsim = 5, theta, covar, omega, sigma, 10, 10, omega_diag = TRUE, sigma_diag = TRUE)
-simpar(nsim = 1, theta, covar, omega, sigma, 10, 10, omega_diag = TRUE, sigma_diag = TRUE, mrgsolve_style = TRUE)
-simpar(nsim = 5, theta, covar, omega, sigma, 10, 10, omega_diag = TRUE, sigma_diag = TRUE, mrgsolve_style = TRUE)
-#
-# complex omega matrix and simple sigma matrix
-theta <- c(1,2,3,4)
-covar <- diag(0.1, 4, 4)
-omega <- list(bmat(1, 0.1, 1, 0.1, 0.1, 1), # 3x3
-              bmat(1, 0, 3),
-              bmat(2, 0.5, 6))
-sigma <- matrix(1)
+test_that("Error message: dimension not match between theta and covar", {
+  theta <- c(1,2,3,4)
+  covar <- diag(0.1, 3, 3)
+  omega <- bmat(1, 0, 3)
+  sigma <- bmat(1, 0.1, 3)
 
-simpar(n = 1, theta, covar, omega, sigma, c(10,10,10), 10, omega_diag = TRUE, sigma_diag = TRUE)
-simpar(n = 5, theta, covar, omega, sigma, c(10,10,10), 10, omega_diag = TRUE, sigma_diag = TRUE)
-simpar(n = 1, theta, covar, omega, sigma, c(10,10,10), 10, omega_diag = TRUE, sigma_diag = TRUE, mrgsolve_style = TRUE)
-simpar(n = 5, theta, covar, omega, sigma, c(10,10,10), 10, omega_diag = TRUE, sigma_diag = TRUE, mrgsolve_style = TRUE)
-#
-# simple omega matrix and complex sigma matrix
-theta <- c(1,2,3,4)
-covar <- diag(0.1, 4, 4)
-omega <- bmat(1, 0, 3)
-sigma <- list(bmat(1, 0.1, 1, 0.1, 0.1, 1), # 3x3
-              bmat(1, 0, 3),
-              bmat(2, 0.5, 6))
+  expect_error(simpar(n = 5, theta, covar, omega,
+                      sigma, 10, 10, sigma_diag = TRUE),
+               "order of covar is not equal to length theta")
+})
 
-simpar(n = 1, theta, covar, omega, sigma, 10, c(10,10,10), omega_diag = TRUE, sigma_diag = TRUE)
-simpar(n = 5, theta, covar, omega, sigma, 10, c(10,10,10), omega_diag = TRUE, sigma_diag = TRUE)
-simpar(n = 1, theta, covar, omega, sigma, 10, c(10,10,10), omega_diag = TRUE, sigma_diag = TRUE, mrgsolve_style = TRUE)
-simpar(n = 5, theta, covar, omega, sigma, 10, c(10,10,10), omega_diag = TRUE, sigma_diag = TRUE, mrgsolve_style = TRUE)
+test_that("Error message: non-positive definite covar", {
+  theta <- c(1,2,3,4)
+  covar <- bmat(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+  omega <- bmat(1, 0, 3)
+  sigma <- bmat(1, 0.1, 3)
 
-# complex omega and sigma matrix
-theta <- c(1,2,3,4)
-covar <- diag(0.1, 4, 4)
-omega <- list(bmat(2, 0.1, 2, 0.1, 0.1, 2), # 3x3
-              bmat(2, 0, 6),
-              bmat(4, 0.5, 12))
-sigma <- list(bmat(1, 0.1, 1, 0.1, 0.1, 1), # 3x3
-              bmat(1, 0, 3),
-              bmat(2, 0.5, 6))
+  expect_error(simpar(n = 5, theta, covar, omega,
+                      sigma, 10, 10, sigma_diag = TRUE),
+               "covar is not positive-definite.")
+})
 
-simpar(n = 1, theta, covar, omega, sigma, c(10,10,10), c(10,10,10), omega_diag = TRUE, sigma_diag = TRUE)
-simpar(n = 5, theta, covar, omega, sigma, c(10,10,10), c(10,10,10), omega_diag = TRUE, sigma_diag = TRUE)
-simpar(n = 1, theta, covar, omega, sigma, c(10,10,10), c(10,10,10), omega_diag = TRUE, sigma_diag = TRUE, mrgsolve_style = TRUE)
-simpar(n = 5, theta, covar, omega, sigma, c(10,10,10), c(10,10,10), omega_diag = TRUE, sigma_diag = TRUE, mrgsolve_style = TRUE)
+test_that("Error message: omega blocks must be square matrices", {
+  theta <- c(1,2,3,4)
+  covar <- diag(0.1, 4, 4)
+  omega <- matrix(data = c(1, 0, 3, 0.1, 0.1, 0.2), nrow = 2)
+  sigma <- bmat(1, 0.1, 3)
+
+  expect_error(simpar(n = 5, theta, covar, omega,
+                      sigma, 10, 10, sigma_diag = TRUE),
+               "not all omega blocks are square")
+})
+
+test_that("Error message: sigma blocks must be square matrices", {
+  theta <- c(1,2,3,4)
+  covar <- diag(0.1, 4, 4)
+  omega <- bmat(1, 0, 3)
+  sigma <- matrix(data = c(1, 0, 3, 0.1, 0.1, 0.2), nrow = 2)
+
+  expect_error(simpar(n = 5, theta, covar, omega,
+                      sigma, 10, 10, sigma_diag = TRUE),
+               "not all sigma blocks are square")
+})
+
 
 
