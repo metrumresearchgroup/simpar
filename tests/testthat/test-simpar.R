@@ -319,5 +319,71 @@ test_that("Error message: sigma blocks must be square matrices", {
                "not all sigma blocks are square")
 })
 
+test_that("Error message: not all omega blocks are positive-definite", {
+  theta <- c(1,2,3,4)
+  covar <- diag(0.1, 4, 4)
+  omega <- bmat(1, 4, 3)
+  sigma <- bmat(1, 0.1, 3)
+
+  expect_error(simpar(n = 5, theta, covar, omega,
+                      sigma, 10, 10, sigma_diag = TRUE),
+               "not all omega blocks are positive-definite")
+})
+
+test_that("Error message: not all sigma blocks are positive-definite", {
+  theta <- c(1,2,3,4)
+  covar <- diag(0.1, 4, 4)
+  omega <- bmat(1, 0, 3)
+  sigma <- bmat(1, 5, 3)
+
+  expect_error(simpar(n = 5, theta, covar, omega,
+                      sigma, 10, 10, sigma_diag = TRUE),
+               "not all sigma blocks are positive-definite")
+})
+
+test_that("Error message: length odf differs from length omega", {
+  theta <- c(1,2,3,4)
+  covar <- diag(0.1, 4, 4)
+  omega <- bmat(1, 0, 3)
+  sigma <- bmat(1, 0.1, 3)
+
+  expect_error(simpar(n = 5, theta, covar, omega,
+                      sigma, c(10,10), 10, sigma_diag = TRUE),
+               "length odf differs from length omega")
+})
+
+test_that("Error message: length sdf differs from length sigma", {
+  theta <- c(1,2,3,4)
+  covar <- diag(0.1, 4, 4)
+  omega <- bmat(1, 0, 3)
+  sigma <- bmat(1, 0.1, 3)
+
+  expect_error(simpar(n = 5, theta, covar, omega,
+                      sigma, 10, c(10,10), sigma_diag = TRUE),
+               "length sdf differs from length sigma")
+})
+
+test_that("Error message: odf[n] is less than number of rows in corresponding matrix", {
+  theta <- c(1,2,3,4)
+  covar <- diag(0.1, 4, 4)
+  omega <- bmat(1, 0, 3)
+  sigma <- bmat(1, 0.1, 3)
+
+  expect_error(simpar(n = 5, theta, covar, omega,
+                      sigma, 1, 10, sigma_diag = TRUE),
+               "odf\\[n\\] is less than number of rows in corresponding matrix")
+})
+
+test_that("Error message: sdf[n] is less than number of rows in corresponding matrix", {
+  theta <- c(1,2,3,4)
+  covar <- diag(0.1, 4, 4)
+  omega <- bmat(1, 0, 3)
+  sigma <- bmat(1, 0.1, 3)
+
+  expect_error(simpar(n = 5, theta, covar, omega,
+                      sigma, 10, 1, sigma_diag = TRUE),
+               fixed = TRUE, # don't treat it as regexp
+               "sdf[n] is less than number of rows in corresponding matrix")
+})
 
 
