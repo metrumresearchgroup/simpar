@@ -10,8 +10,8 @@ Description: Given the parameter estimates of a mixed effect model, this
     random effects.  Two levels of random effects are supported, following the 
     naming conventions of NONMEM.
 License: GPL (>=2)
-Imports: MASS
-Suggests: testthat, metrumrg
+Imports: MASS, utils
+Suggests: testthat, metrumrg, mrgsolve
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)

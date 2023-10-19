@@ -342,7 +342,7 @@ trans_matrix <- function(sim, nsim, matrix_type, dim){
 
   xx <- list()
   for (i in 1:length(dim2)){
-    xx[[i]] <- tail(index[[i]], n = dim2[[i]])
+    xx[[i]] <- utils::tail(index[[i]], n = dim2[[i]])
   }
 
   matrix <- lapply(xx, function(x) as.data.frame(matrix[,x]))

@@ -46,7 +46,6 @@ simpar(
 \item{sigma_diag}{logical; default is FALSE, if TRUE, simulated sigma off-diagonal elements will be 0}
 
 \item{format}{default is "df", which will provide output as a data frame, if "list", the output will be provided as a list}
-
 }
 \value{
 matrix, with column names indicating parameters, and row names indicating
