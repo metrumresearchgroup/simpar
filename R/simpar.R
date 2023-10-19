@@ -20,6 +20,9 @@ glue <- function(...) {
 #' @param digits number of significant digits to include in output
 #' @param min lower limit for parameter estimates
 #' @param max upper limit for parameter estimates
+#' @param omega_diag logical; default is FALSE, if TRUE, simulated omega off-diagonal elements will be 0
+#' @param sigma_diag logical; default is FALSE, if TRUE, simulated sigma off-diagonal elements will be 0
+#' @param format default is "df", which will provide output as a data frame, if "list", the output will be provided as a list
 #'
 #' @details
 #' If min or max are non-default (see below), you may want to set nsim
@@ -91,7 +94,7 @@ glue <- function(...) {
 #' @export
 simpar <- function(nsim,theta,covar,omega,sigma,odf=NULL,sdf=NULL,
                    digits=4,min=-Inf,max=Inf,
-                   omega_diag=FALSE,sigma_diag=FALSE,mrgsolve_style=FALSE){
+                   omega_diag=FALSE,sigma_diag=FALSE,format="df"){
   covar <- as.matrix(covar)
 
   # Error checks 1
@@ -176,7 +179,7 @@ simpar <- function(nsim,theta,covar,omega,sigma,odf=NULL,sdf=NULL,
   # Output in mrgsolve style
   sim2 <- as.data.frame(sim)
 
-  if (mrgsolve_style == TRUE){
+  if (format == "list"){
 
     theta <- sim2[,grepl("TH",colnames(sim2))]
     names(theta) <- gsub("\\.", "", names(theta))

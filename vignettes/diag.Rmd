@@ -1,0 +1,147 @@
+---
+title: "Simulate parameter uncertainty with and without diagonal elements"
+author: "Shen Cheng"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_vignette:
+    toc: true
+    number_sections: true
+    keep_md: true
+vignette: >
+  %\VignetteIndexEntry{Simulate parameter uncertainty with and without diagonal elements}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(comment = '.')
+```
+
+Let's use an example final model named `107` as an example for simulation. Final model `107` was developed using `NONMEM` using R package `bbr` as interface.
+
+```{r packages and others, warning = FALSE, message = FALSE}
+suppressPackageStartupMessages(library(mrgsolve))
+suppressPackageStartupMessages(library(tidyverse))
+library(simpar)
+library(here)
+library(glue)
+
+RhpcBLASctl::blas_set_num_threads(1)
+```
+
+# Load `NONMEM` model output
+
+Let's load final model output first.
+
+```{r load NONMEM model through bbr, warning = FALSE, message = FALSE}
+ext <- simpar:::ex(file.type = "ext", matrix.type = "diag")
+cov <- simpar:::ex(file.type = "cov", matrix.type = "diag")
+```
+
+Let's take a look at the example final estimates in `.ext` and the final covariance matrix in `.cov` file
+```{r, warning = FALSE, message = FALSE}
+ext <- ext %>% filter(ITERATION == -1000000000)
+
+knitr::kable(ext)
+knitr::kable(cov)
+```
+
+The number of subjects and number of observations in the dataset helps in determining the `simpar` omega and sigma matrix `df` subsequently.
+
+```{r, warning = FALSE, message = FALSE}
+th <- ext %>% dplyr::select(starts_with("THETA")) %>% as.matrix()
+om <- ext %>% dplyr::select(starts_with("OMEGA")) %>% as_bmat()
+sg <- ext %>% dplyr::select(starts_with("SIGMA")) %>% as_bmat() 
+covar <- cov %>% 
+  filter(grepl("THETA", NAME)) %>% 
+  column_to_rownames("NAME") %>% 
+  dplyr::select(starts_with("THETA")) %>% 
+  as.matrix()
+```
+
+```{r get nid and nobs}
+data <- simpar:::ex(file.type = "nmdat")
+nid <- data %>% distinct(ID) %>% nrow()
+nobs <- data %>% filter(EVID == 0, BLQ == 0, C != "C") %>% nrow() 
+knitr::kable(data.frame(nid = nid, nobs = nobs))
+```
+
+# Simulate parameter uncertainties using `simpar`
+
+The parameter uncertainties were simulated with `simpar` for 1000 times.
+
+```{r simulate parameter uncertainty 1}
+set.seed(12345)
+uc1 <- simpar( 
+  nsim = 1000, 
+  theta = th, 
+  covar = covar,
+  omega = om, 
+  odf = 200, # >= nid
+  sigma = sg, 
+  sdf = 4000, # >= nobs
+  format = "list"
+)
+
+uc1[[1]]
+```
+
+The `OMEGA` and `SIGMA` matrices in the `NONMEM` model are diagonal matrices, but the simulated matrices are not.  
+
+
+**In the `NONMEM` model**:   
+
+`$OMEGA`  
+`0.2   ;ETA(KA)`  
+`0.2   ;ETA(V2)`  
+`0.2   ;ETA(CL)`  
+`$SIGMA`  
+`0.05     ; 1 pro error`  
+`0.05     ; 2 add error`
+
+# Simulate diagonal `OMEGA` and `SIGMA` matrices
+
+We can use `omega_diag = TRUE` argument to simulate diagonal `OMEGA` matrix.
+
+```{r simulate parameter uncertainty 2}
+set.seed(12345)
+uc2 <- simpar( 
+  nsim = 1000, 
+  theta = th, 
+  covar = covar,
+  omega = om, 
+  odf = 200, # >= nid
+  sigma = sg, 
+  sdf = 4000, # >= nobs
+  format = "list", 
+  omega_diag = TRUE
+)
+
+uc2[[1]]
+```
+
+We can also use `sigma_diag = TRUE` argument to simulate diagonal `SIGMA` matrix.
+
+```{r simulate parameter uncertainty 3}
+set.seed(12345)
+uc2 <- simpar( 
+  nsim = 1000, 
+  theta = th, 
+  covar = covar,
+  omega = om, 
+  odf = 200, # >= nid
+  sigma = sg, 
+  sdf = 4000, # >= nobs
+  format = "list", 
+  omega_diag = TRUE, 
+  sigma_diag = TRUE
+)
+
+uc2[[1]]
+```
+
+```{r}
+sessioninfo::session_info()
+```
+
+

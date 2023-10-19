@@ -82,3 +82,43 @@ as.halfmatrix.halfmatrix <- function(x,...)x
 #' @export
 as.halfmatrix.default <- function(x,...)half(as.matrix.halfmatrix(x))
 
+
+#' Quick access to example model output
+#' @param file.type file type to extract, can choose from c("nmdata", "ext", "cov", "cor", "tab", "ctl", "lst", "mod", "simmod")
+#' @param matrix.type default is "block" matrix, can choose "diag" matrix
+#' @noRd
+#' @export
+ex <- function(file.type, matrix.type = "block"){
+
+  if(!(file.type %in% c("nmdat", "ext", "cov", "cor", "tab", "ctl", "lst", "mod", "simmod"))){
+    stop('invalid file.type', call. = FALSE)}
+
+  if(!(matrix.type %in% c("block", "diag"))){
+    stop('invalid matrix.type', call. = FALSE)}
+
+  path <- system.file("example-model", package = "simpar")
+
+  if (file.type == "nmdat"){
+    data <- read.csv(file.path(path, "analysis3.csv"))
+  } else if (file.type %in% c("ext", "cov", "cor", "tab") & matrix.type == "block"){
+    data <- read.table(file.path(path, "106", paste0("106.", file.type)), skip = 1, header = TRUE)
+  } else if (file.type %in% c("ctl", "lst", "mod") & matrix.type == "block"){
+    data <- readLines(file.path(path, "106", paste0("106.", file.type)))
+  } else if (file.type == "simmod" & matrix.type == "block"){
+    mod <- mread(file.path(path, "simmod", "106.mod"))
+  } else if (file.type %in% c("ext", "cov", "cor", "tab") & matrix.type == "diag"){
+    data <- read.table(file.path(path, "107", paste0("107.", file.type)), skip = 1, header = TRUE)
+  } else if (file.type %in% c("ctl", "lst", "mod") & matrix.type == "diag"){
+    data <- readLines(file.path(path, "107", paste0("107.", file.type)))
+  } else if (file.type == "simmod" & matrix.type == "diag"){
+    mod <- mread(file.path(path, "simmod", "107.mod"))
+  }
+
+  if (file.type == "simmod"){
+    return(mod)
+  }else{
+    return(data)
+  }
+}
+
+

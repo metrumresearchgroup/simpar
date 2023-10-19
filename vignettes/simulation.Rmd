@@ -1,0 +1,394 @@
+---
+title: "Simulation with parameter uncertainties using simpar"
+author: "Shen Cheng"
+date: "2023-10-09"
+output: 
+  rmarkdown::html_vignette: 
+    toc: true
+    number_sections: true
+    keep_md: true
+vignette: >
+  %\VignetteIndexEntry{Simulations with parameter uncertainties}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# Introduction
+
+This vignette shows you how to simulate with parameter uncertainties using `simpar`. Specifically,   
+- This vignette simulates individual single dose PK profiles with parameter uncertainties generated from `simpar` with and without `mrgsolve` styles.  
+- Median, 5th and 95th percentiles, and their prediction intervals of single dose Cmax in each dose level were summarized.
+
+# Library
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(comment = '.')
+```
+
+Let's use an example final model named `106` as an example for simulation. Final model `106` was developed using `NONMEM` using R package `bbr` as interface.
+
+```{r packages and others, warning = FALSE, message = FALSE}
+suppressPackageStartupMessages(library(mrgsolve))
+suppressPackageStartupMessages(library(tidyverse))
+library(simpar)
+library(here)
+library(glue)
+library(future)
+library(future.apply)
+library(pmtables)
+library(data.table)
+
+RhpcBLASctl::blas_set_num_threads(1)
+```
+
+# Load `NONMEM` model output
+
+Let's load an example model output first:   
+
+- `simpar` provided a few example model outputs which can be call through `ex` function. 
+
+- `matrix.type` argument in `ex` specifies matrix type, either `"block"` or `"diag"`. The default `matrix.type` is `"block"`.   
+
+- `file.type` argument in `ex` specifies file type, it can choose from:   
+
+  * `"nmdat"`: the `NONMEM` model input data set. 
+  
+  * `"ext"`: the `NONMEM` output `.ext` file. 
+  
+  * `"cov"`: the `NONMEM` output `.cov` file. 
+  
+  * `"cor"`: the `NONMEM` output `.cor` file. 
+  
+  * `"tab"`: the `NONMEM` output `.tab` file. 
+  
+  * `"ctl"`: the `NONMEM` control stream `.ctl` file. 
+  
+  * `"lst"`: the `NONMEM` output `.lst` file. 
+  
+  * `"mod"`: the `NONMEM` control stream `.mod` file. 
+  
+  * `"simmod"`: the `mrgsolve` simulation model.
+
+```{r load NONMEM model through bbr, warning = FALSE, message = FALSE}
+ext <- simpar:::ex(file.type = "ext")
+cov <- simpar:::ex(file.type = "cov")
+```
+
+Let's take a look at the example final estimates in `.ext` and the final covariance matrix in `.cov` file
+```{r, warning = FALSE, message = FALSE}
+ext <- ext %>% filter(ITERATION == -1000000000)
+
+knitr::kable(ext)
+knitr::kable(cov)
+```
+
+In order to simulate parameter uncertainty in `simpar`, we need several elements extracted from final `NONMEM` model output:   
+
+- `th`: `THETA` final estimates. 
+
+- `om`: `OMEGA` final estimates as matrix/matrices. 
+
+- `sg`: `SIGMA` final estimates as matrix/matrices. 
+
+- `covar`: final covariance matrix for all `THETA` estimates. 
+
+
+```{r, warning = FALSE, message = FALSE}
+th <- ext %>% dplyr::select(starts_with("THETA")) %>% as.matrix()
+om <- ext %>% dplyr::select(starts_with("OMEGA")) %>% as_bmat()
+sg <- ext %>% dplyr::select(starts_with("SIGMA")) %>% as_bmat() 
+covar <- cov %>% 
+  filter(grepl("THETA", NAME)) %>% 
+  column_to_rownames("NAME") %>% 
+  dplyr::select(starts_with("THETA")) %>% 
+  as.matrix()
+```
+
+If package `bbr` is available, the input `th`, `om`, `sg` and `covar` can be acquired directly as `simpar` friendly format using `bbr` functionalities.  
+
+```{r, warning = FALSE, message = FALSE}
+runno <- "106"
+
+sum <- bbr::read_model(.path = here("inst", "example-model", runno)) %>%
+  bbr::model_summary()
+
+th <- bbr::get_theta(sum) # THETAs
+om <- bbr::get_omega(sum) # OMEGAs
+sg <- bbr::get_sigma(sum) # SIGMAs
+covar <- bbr::cov_cor(sum)$cov_theta # THETA covariance
+```
+
+The number of subjects and number of observations in the dataset helps in determining the `simpar` omega and sigma matrix `df` subsequently.
+
+```{r get nid and nobs}
+data <- simpar:::ex(file.type = "nmdat")
+nid <- data %>% distinct(ID) %>% nrow()
+nobs <- data %>% filter(EVID == 0, BLQ == 0, C != "C") %>% nrow() 
+knitr::kable(data.frame(nid = nid, nobs = nobs))
+```
+
+
+# Assemble a virtual population for simulation
+
+Let's assemble a virtual population with 1000 subjects with covariates of `WT`, `EGFR`, `ALB` and `AGE`, assuming they received single drug dose with 4 dose levels.
+
+```{r virtual population sim, warning = FALSE, message = FALSE}
+set.seed(54321)
+simpop <- data.frame(ID = seq(1:1000), # 1000 subjects
+                     TIME = 0, 
+                     CMT = 1, 
+                     EVID = 1,
+                     AMT = c(rep(5,250), 
+                             rep(10,250),
+                             rep(15,250),
+                             rep(20,250)), 
+                     WT = rnorm(n = 1000, mean = 70, sd = 10),
+                     EGFR = rnorm(n = 1000, mean = 90, sd = 10),
+                     ALB = rnorm(n = 1000, mean = 4.5, sd = 1),
+                     AGE   = rnorm(n = 1000, mean = 35 , sd = 5)) %>% 
+  mutate(DOSE = AMT)
+```
+
+# Simulate parameter uncertainties using `simpar`
+
+The parameter uncertainties were simulated with `simpar`, specifically:   
+
+- `nsim`: specifies the number of parameter vectors to simulate.   
+
+- `theta`: specifies the `THETA` estimates from model output.   
+
+- `covar`: specifies the covariance matrix for `THETA` estimates from model output.  
+
+- `omega`: specifies the `OMEGA` matrix from model output.   
+
+- `odf`: specifies the degree of freedom of the `OMEGA` matrix assuming inverse-wishart distribution, which typically set close to number of individuals in the dataset.    
+
+- `sigma`: specifies the `SIGMA` matrix from model output.   
+
+- `sdf`: specifies the degree of freedom of the `SIGMA` matrix assuming inverse-gamma distribution, which typically set close to number of observations in the dataset.  
+
+
+```{r simulate parameter uncertainty, warning = FALSE, message = FALSE}
+set.seed(12345)
+uc <- simpar( 
+  nsim = 1000, 
+  theta = th, 
+  covar = covar,
+  omega = om, 
+  odf = 200, # >= nid
+  sigma = sg, 
+  sdf = 4000 # >= nobs
+) %>% as.data.frame()
+
+knitr::kable(head(uc))
+```
+
+Some reformating needed following the parameter uncertainty simulations.
+
+```{r reformat parameter uncertainty, warning = FALSE, message = FALSE}
+names(uc) <- gsub("[[:punct:]]", "", names(uc))
+names(uc) <- gsub("TH", "THETA", names(uc))
+names(uc) <- gsub("OM", "OMEGA", names(uc))
+names(uc) <- gsub("SG", "SIGMA", names(uc))
+
+knitr::kable(head(uc))
+```
+
+# Simulate `Cmax` incorporating `simpar` generated parameter uncertainties
+
+Load `mrgsolve` model for simulations.
+
+```{r load mrgsolve model}
+mod <- simpar:::ex(file.type = "simmod")
+```
+
+Check missing covariates.
+
+```{r check missing covariates}
+inventory(mod, simpop)
+```
+
+Run simulations with 1000 replicates incorporating parameter uncertainties.
+
+```{r run simulations}
+runsim <- TRUE
+seq <- seq_len(1000)
+
+Sys.setenv(R_FUTURE_FORK_ENABLE=TRUE, R_LIBS = "lib")
+options(future.fork.enable = TRUE)
+ncores <- future::availableCores()
+plan(multicore, workers = ncores-1)
+
+simfunc <- function(i){
+  
+  mod <- param(mod, uc[i,])
+  mod <- omat(mod, as_bmat(uc[i,], "OMEGA"))
+  mod <- smat(mod, as_bmat(uc[i,], "SIGMA"))
+  
+  mrgsim(mod,
+         data = simpop, 
+         output = "df",  
+         recover = "DOSE", 
+         obsonly = TRUE,
+         quiet  = TRUE) %>% 
+    mutate(isim = i)
+}
+
+system.time({
+  if(runsim){
+    set.seed(12315)
+    sims <- future_lapply(
+      seq, simfunc, 
+      future.seed = TRUE
+    ) %>% bind_rows()
+  }
+})
+```
+
+Check simulated output. 
+
+```{r}
+knitr::kable(head(sims))
+```
+
+Calculate `Cmax` and summarize medians, 5th and 95th percentiles and their prediction intervals of `Cmax` for each dose.
+
+```{r summarize output, warning = FALSE, message = FALSE}
+
+# Create a function to summarize Cmax using the simulation output
+sumCmax <- function(simout){
+  
+  # use `data.table` for speed up
+  xx <- simout %>% as.data.table()
+  xx <- xx[, .(cmax = max(IPRED)), by = c("ID", "isim", "DOSE")]
+  xx <- as.data.frame(xx)
+
+  summ <- xx %>% 
+    group_by(isim, DOSE) %>% 
+    summarise(mi = median(cmax), 
+              lo = quantile(cmax, prob = 0.05), 
+              hi = quantile(cmax, prob = 0.95)) %>% 
+    group_by(DOSE) %>% 
+    summarise(mi_mi = median(mi), 
+              mi_lo = quantile(mi, prob = 0.025), 
+              mi_hi = quantile(mi, prob = 0.975), 
+              lo_mi = median(lo), 
+              lo_lo = quantile(lo, prob = 0.025), 
+              lo_hi = quantile(lo, prob = 0.975), 
+              hi_mi = median(hi), 
+              hi_lo = quantile(hi, prob = 0.025), 
+              hi_hi = quantile(hi, prob = 0.975)) %>% 
+    ungroup() %>% 
+    mutate(across(mi_mi:hi_hi, pmtables::sig)) %>% 
+    mutate(mi_mi_ci = paste0("(", mi_lo, ", ", mi_hi, ")"), 
+           lo_mi_ci = paste0("(", lo_lo, ", ", lo_hi, ")"), 
+           hi_mi_ci = paste0("(", hi_lo, ", ", hi_hi, ")"), 
+           mi_lo = NULL, mi_hi = NULL, 
+           lo_lo = NULL, lo_hi = NULL, 
+           hi_lo = NULL, hi_hi = NULL) %>% 
+    dplyr::select(DOSE, mi_mi, mi_mi_ci, lo_mi, lo_mi_ci, hi_mi, hi_mi_ci) %>% 
+    mutate(DOSE = glue("{DOSE} mg"))
+  
+  return(summ)
+}
+
+summ <- sumCmax(simout = sims)
+
+```
+
+Generate a output table using `pmtables`.
+
+```{r generate a table summary, warning = FALSE, message = FALSE}
+sumCmax_table <- function(x){
+  table <- x %>% 
+    rename(`Dose` = DOSE, 
+           `Median Cmax` = mi_mi, 
+           `95% PI of median Cmax` = mi_mi_ci, 
+           `5th percentile Cmax` = lo_mi, 
+           `95% PI of 5th percentile Cmax` = lo_mi_ci, 
+           `95th percentile Cmax` = hi_mi, 
+           `95% PI of 95th percentile Cmax` = hi_mi_ci) %>% 
+    knitr::kable()
+  
+  return(table)
+}
+
+sumCmax_table(x = summ) 
+```
+
+# Simulate parameter uncertainties using `simpar` with `mrgsolve` style
+
+Parameter uncertainty can also be simulated with `simpar` by setting `format = "list"`, which will provide parameter uncertainty simulated directly in `mrgsolve` readable `list` format without additional formatting.
+
+```{r simulate parameter uncertainty mrgsolve style, warning = FALSE, message = FALSE}
+set.seed(12345)
+uc2 <- simpar( 
+  nsim = 1000, 
+  theta = th, 
+  covar = covar,
+  omega = om, 
+  odf = 200, # >= nid
+  sigma = sg, 
+  sdf = 4000, # >= nobs
+  format = "list"
+) 
+```
+
+```{r}
+uc2[1]
+```
+
+# Simulate `Cmax` incorporating `simpar` generated `mrgsolve` style parameter uncertainties
+
+Run simulations with 1000 replicates incorporating parameter uncertainties with simulated `mrgsolve` style parameter uncertainty.
+
+```{r run simulations with mrgsolve style parameter uncertainty}
+runsim <- TRUE
+seq <- seq_len(1000)
+
+Sys.setenv(R_FUTURE_FORK_ENABLE=TRUE, R_LIBS = "lib")
+options(future.fork.enable = TRUE)
+ncores <- future::availableCores()
+plan(multicore, workers = ncores-1)
+
+simfunc2 <- function(i){
+  
+  mod <- update(mod, data = uc2[[i]])
+  
+  mrgsim(mod,
+         data = simpop, 
+         output = "df",  
+         recover = "DOSE", 
+         obsonly = TRUE,
+         quiet  = TRUE) %>% 
+    mutate(isim = i)
+}
+
+system.time({
+  if(runsim){
+    set.seed(12315)
+    sims2 <- future_lapply(
+      seq, simfunc2, 
+      future.seed = TRUE
+    ) %>% bind_rows()
+  }
+})
+```
+
+```{r}
+knitr::kable(head(sims2))
+```
+
+Summarize drug exposures again using the same approach.
+
+```{r summarize output 2, warning = FALSE, message = FALSE}
+summ2 <- sumCmax(sims2)
+```
+
+```{r generate a table summary 2, warning = FALSE, message = FALSE}
+sumCmax_table(x = summ2) 
+```
+
+```{r}
+sessioninfo::session_info()
+```

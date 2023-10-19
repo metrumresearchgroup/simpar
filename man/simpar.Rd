@@ -17,7 +17,7 @@ simpar(
   max = Inf,
   omega_diag = FALSE,
   sigma_diag = FALSE,
-  mrgsolve_style = FALSE
+  format = "df"
 )
 }
 \arguments{
@@ -40,6 +40,13 @@ simpar(
 \item{min}{lower limit for parameter estimates}
 
 \item{max}{upper limit for parameter estimates}
+
+\item{omega_diag}{logical; default is FALSE, if TRUE, simulated omega off-diagonal elements will be 0}
+
+\item{sigma_diag}{logical; default is FALSE, if TRUE, simulated sigma off-diagonal elements will be 0}
+
+\item{format}{default is "df", which will provide output as a data frame, if "list", the output will be provided as a list}
+
 }
 \value{
 matrix, with column names indicating parameters, and row names indicating
