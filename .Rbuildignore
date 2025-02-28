@@ -5,7 +5,7 @@ Makefile
 test\.R
 simpar*\.tar\.gz
 simpar\.Rcheck
-\.drone\.yml
 ^README\.Rmd$
 NEWS\.md
 \.gitkeep
+^\.github$
