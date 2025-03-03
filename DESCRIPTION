@@ -9,6 +9,7 @@ Description: Given the parameter estimates of a mixed effect model, this
     account the relevant variance-covariance structure of the fixed effects and 
     random effects.  Two levels of random effects are supported, following the 
     naming conventions of NONMEM.
+URL: https://metrumresearchgroup.github.io/simpar, https://github.com/metrumresearchgroup/simpar
 License: GPL (>=2)
 Imports: MASS
 Suggests: testthat, metrumrg
