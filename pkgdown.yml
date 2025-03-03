@@ -2,7 +2,7 @@ pandoc: 3.1.3
 pkgdown: 2.1.1
 pkgdown_sha: ~
 articles: {}
-last_built: 2025-03-03T16:33Z
+last_built: 2025-03-03T16:39Z
 urls:
   reference: https://metrumresearchgroup.github.io/simpar/reference
   article: https://metrumresearchgroup.github.io/simpar/articles
