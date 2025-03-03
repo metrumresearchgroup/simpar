@@ -2,6 +2,8 @@
 ^\.Rproj\.user$
 Makefile
 ^pkgr\.yml$
+^pkgdown$
+^_pkgdown\.yml$
 test\.R
 simpar*\.tar\.gz
 simpar\.Rcheck

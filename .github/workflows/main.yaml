@@ -38,11 +38,15 @@ jobs:
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           extra-packages: |
+            any::pkgdown
             any::rcmdcheck
           upgrade: 'TRUE'
       - uses: r-lib/actions/check-r-package@v2
         with:
           error-on: '"note"'
+      - name: Check pkgdown
+        shell: Rscript {0}
+        run: pkgdown::check_pkgdown()
   release:
     if: github.ref_type == 'tag'
     name: Upload release
